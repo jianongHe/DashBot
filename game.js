@@ -132,9 +132,9 @@ class Robot {
             particles.push({
                 x: this.x,
                 y: this.y,
-                radius: Math.random() * 3 + 2,
-                life: 30,
-                color: '#663300' // poop brown
+                size: Math.random() * 12 + 8,
+                rotation: Math.random() * Math.PI * 2,
+                life: 30
             });
             this.y += this.dashVelY;
             // === boundary reflection (billiard‑style) ===
@@ -413,10 +413,14 @@ function gameLoop(timestamp) {
     });
     particles = particles.filter(p => p.life > 0);
     particles.forEach(p => {
-        ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.font = `${p.size}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💩', 0, 0);
+        ctx.restore();
     });
     drawSafeZoneCircle();
     players.forEach(player => player.draw(ctx));
