@@ -129,12 +129,15 @@ class Robot {
         // Update position if dashing
         if (this.isDashing) {
             this.x += this.dashVelX;
+            const spreadAngle = (Math.random() - 0.5) * 0.6; // -0.3 ~ 0.3 radians
+            const angle = this.angle + Math.PI + spreadAngle; // spray backward, add random spread
+            const distance = Math.random() * 15;
             particles.push({
-                x: this.x,
-                y: this.y,
+                x: this.x + Math.cos(angle) * distance,
+                y: this.y + Math.sin(angle) * distance,
                 size: Math.random() * 12 + 8,
                 rotation: Math.random() * Math.PI * 2,
-                life: 30
+                life: Math.floor(Math.random() * 20 + 20) // 20 ~ 40
             });
             this.y += this.dashVelY;
             // === boundary reflection (billiard‑style) ===
@@ -419,7 +422,9 @@ function gameLoop(timestamp) {
         ctx.font = `${p.size}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.globalAlpha = p.life / 40; // 逐渐变透明（假设最大 life 是 40）
         ctx.fillText('💩', 0, 0);
+        ctx.globalAlpha = 1;
         ctx.restore();
     });
     drawSafeZoneCircle();
