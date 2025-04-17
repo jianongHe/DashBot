@@ -131,7 +131,7 @@ class Robot {
             this.x += this.dashVelX;
             this.y += this.dashVelY;
             const currentSpeed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
-            const particleCount = Math.floor(currentSpeed / 3); // 每3单位速度生成1个屎粒子
+            const particleCount = Math.floor(currentSpeed / 5); // 每5单位速度生成1个屎粒子
 
             for (let i = 0; i < particleCount; i++) {
                 const spreadAngle = (Math.random() - 0.5) * 1.5;
@@ -145,8 +145,11 @@ class Robot {
                     rotation: Math.random() * Math.PI * 2,
                     vx: Math.cos(angle) * currentSpeed * 0.1,
                     vy: Math.sin(angle) * currentSpeed * 0.1,
-                    life: Math.floor(Math.random() * 20 + 20)
+                    life: Math.floor(Math.random() * 20 + 25)
                 });
+                if (particles.length > 300) {
+                    particles.splice(0, particles.length - 300);
+                }
             }
             // === boundary reflection (billiard‑style) ===
             if (this.x < this.radius) {
