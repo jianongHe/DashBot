@@ -440,3 +440,28 @@ function resetGame() {
 
 // --- Start the Game ---
 initGame(); // Initial game start when the script loads
+
+function generateStars(count, width, height) {
+    const container = document.getElementById('star-background');
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        const size = Math.random() * 2 + 0.5;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.top = `${Math.random() * height}px`;
+        star.style.left = `${Math.random() * width}px`;
+        container.appendChild(star);
+    }
+}
+
+function setupStarfield() {
+    const update = () => {
+        generateStars(200, window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', update);
+    update();
+}
+
+setupStarfield();
