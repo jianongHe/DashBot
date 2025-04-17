@@ -39,6 +39,7 @@ let animationFrameId;
 let safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2; // 初始为对角线的一半，确保覆盖全画布
 let safeZoneCenter = { x: canvas.width / 2, y: canvas.height / 2 };
 let gameStartTime;
+let particles = [];
 
 // --- UI Elements ---
 const p1HpElement = document.getElementById('p1-hp');
@@ -128,6 +129,13 @@ class Robot {
         // Update position if dashing
         if (this.isDashing) {
             this.x += this.dashVelX;
+            particles.push({
+                x: this.x,
+                y: this.y,
+                radius: Math.random() * 3 + 2,
+                life: 30,
+                color: '#663300' // poop brown
+            });
             this.y += this.dashVelY;
             // === boundary reflection (billiard‑style) ===
             if (this.x < this.radius) {
@@ -399,6 +407,17 @@ function gameLoop(timestamp) {
 
     // Draw (Reflects the very latest state)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+        p.life--;
+        p.radius *= 0.95;
+    });
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
     drawSafeZoneCircle();
     players.forEach(player => player.draw(ctx));
 
@@ -509,6 +528,7 @@ function endGame(winningPlayer) {
 
 function resetGame() {
     console.log("Resetting game...");
+    particles = [];
     initGame(); // Re-initialize the game state
 }
 
