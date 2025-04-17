@@ -129,14 +129,16 @@ class Robot {
         // Update position if dashing
         if (this.isDashing) {
             this.x += this.dashVelX;
-            const spreadAngle = (Math.random() - 0.5) * 0.6; // -0.3 ~ 0.3 radians
-            const angle = this.angle + Math.PI + spreadAngle; // spray backward, add random spread
-            const distance = Math.random() * 15;
+            const spreadAngle = (Math.random() - 0.5) * 1.5; // 更广角度：-0.75 ~ 0.75 radians
+            const angle = this.angle + spreadAngle; // spray BACKWARD from dash direction (angle 是正向方向)
+            const distance = Math.random() * 25 + 10; // 拉远喷射范围
             particles.push({
                 x: this.x + Math.cos(angle) * distance,
                 y: this.y + Math.sin(angle) * distance,
-                size: Math.random() * 12 + 8,
+                size: Math.random() * 10 + 10 + distance * 0.2, // 更远的粒子更大，更近的更小
                 rotation: Math.random() * Math.PI * 2,
+                vx: Math.cos(angle) * 2,
+                vy: Math.sin(angle) * 2,
                 life: Math.floor(Math.random() * 20 + 20) // 20 ~ 40
             });
             this.y += this.dashVelY;
@@ -411,6 +413,8 @@ function gameLoop(timestamp) {
     // Draw (Reflects the very latest state)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
         p.life--;
         p.radius *= 0.95;
     });
