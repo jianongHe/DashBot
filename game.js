@@ -190,7 +190,7 @@ class Robot {
 
         // Apply Knockback only if not dashing (prevents self-knockback during head-on collision resolution)
         if (!this.isDashing) {
-            const knockbackDist = config.dash.knockbackForce * (damage / config.charge.maxDamage);
+            const knockbackDist = config.dash.knockbackForce * 2 * (damage / config.charge.maxDamage);
             this.applyKnockback(knockbackDirX, knockbackDirY, knockbackDist);
         }
 
@@ -202,29 +202,23 @@ class Robot {
     }
 
     applyKnockback(dirX, dirY, distance) {
-        const totalFrames = 30;
+        const totalFrames = 20;
         let frame = 0;
-        const initialX = this.x;
-        const initialY = this.y;
+        const initialSpeed = distance / totalFrames * 2;
 
-        const animateKnockback = () => {
-            if (frame >= totalFrames) return;
-
+        const knockbackInterval = setInterval(() => {
             const progress = frame / totalFrames;
-            const easing = 1 - Math.pow(1 - progress, 3);
-            const moveDist = distance * easing;
+            const speed = initialSpeed * (1 - progress);
 
-            this.x = initialX + dirX * moveDist;
-            this.y = initialY + dirY * moveDist;
+            this.x += dirX * speed;
+            this.y += dirY * speed;
 
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
 
             frame++;
-            requestAnimationFrame(animateKnockback);
-        };
-
-        requestAnimationFrame(animateKnockback);
+            if (frame >= totalFrames) clearInterval(knockbackInterval);
+        }, 16);
     }
 
     triggerHitEffect() {
