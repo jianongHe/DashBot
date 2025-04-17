@@ -1,0 +1,84 @@
+body {
+    display: flex;
+    flex-direction: column; /* Stack title and game vertically */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #1a1a2e; /* Dark space blue */
+    color: #e0e0e0; /* Light text */
+    font-family: sans-serif;
+}
+
+h1 {
+    color: #f0a500; /* Yellowish title */
+    margin-bottom: 10px;
+}
+
+#game-container {
+    position: relative; /* Needed for absolute positioning of UI elements */
+    width: 800px; /* Match canvas width */
+    height: 600px; /* Match canvas height */
+}
+
+canvas {
+    border: 2px solid #4a4a6a; /* Slightly lighter border */
+    display: block; /* Remove extra space below canvas */
+    background-color: #0f0f1a; /* Darker canvas background */
+}
+
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    color: white;
+    pointer-events: none; /* UI doesn't block clicks on canvas */
+    font-size: 1.1em;
+}
+
+#player1-info, #player2-info {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+.charge-indicator {
+    height: 5px;
+    background-color: limegreen;
+    width: 0%; /* Start with 0 width */
+    margin-top: 3px;
+    transition: width 0.1s linear; /* Smooth transition */
+}
+
+
+#game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(40, 40, 60, 0.9);
+    padding: 30px;
+    border: 2px solid #f0a500;
+    border-radius: 10px;
+    text-align: center;
+    color: white;
+}
+
+#game-over h2 {
+    margin-top: 0;
+    color: #f0a500;
+}
+
+#game-over button {
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 15px;
+    background-color: #f0a500;
+    border: none;
+    border-radius: 5px;
+    color: #1a1a2e;
+}
