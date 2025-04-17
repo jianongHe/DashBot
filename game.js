@@ -23,8 +23,8 @@ const config = {
     },
     friction: 0.90, // Slows down dashing bots slightly
     zone: {
-        totalGameTime: 10000, // ms, total game time (e.g. 10 sec for testing)
-        shrinkStartTime: 3000, // ms, time when shrinking starts (e.g. 3 sec for testing)
+        totalGameTime: 100000, // ms, total game time (e.g. 10 sec for testing)
+        shrinkStartTime: 30000, // ms, time when shrinking starts (e.g. 3 sec for testing)
         shrinkDuration: 5000, // ms, total shrink time
         minRadius: 100, // min radius of safe zone
         damagePerSecondOutside: 10 // HP loss per second outside
@@ -57,6 +57,7 @@ class Robot {
         this.hp = config.robot.maxHp;
         this.radius = config.robot.radius;
         this.color = color;
+        this.originalColor = color;
         // this.angle now consistently represents the robot's FACING direction (where poop comes out)
         this.angle = Math.random() * Math.PI * 2;
         this.angleSpeed = config.robot.angleSpeed;
@@ -72,6 +73,7 @@ class Robot {
 
         this.controlKey = controlKey; // For keyboard control
         this.isControlDown = false; // Tracks if the control key/mouse is pressed
+        this.isInSafeZone = true;
     }
 
     startCharge() {
@@ -245,7 +247,7 @@ class Robot {
     }
 
     triggerHitEffect() {
-        const originalColor = this.color;
+        const originalColor = this.originalColor;
         let flashes = 5;
         const flashInterval = setInterval(() => {
             this.color = this.color === 'white' ? originalColor : 'white';
@@ -357,8 +359,17 @@ function gameLoop(timestamp) {
         const dx = player.x - safeZoneCenter.x;
         const dy = player.y - safeZoneCenter.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > safeZoneRadius) {
+        const currentlyInSafeZone = distance <= safeZoneRadius;
+
+        if (!currentlyInSafeZone) {
             player.takeDamage(config.zone.damagePerSecondOutside * (1 / 60), 0, 0); // Assume 60fps
+            player.isInSafeZone = false;
+        } else {
+            // If player刚从圈外回到圈内，重置颜色
+            if (!player.isInSafeZone) {
+                player.color = player.originalColor;
+                player.isInSafeZone = true;
+            }
         }
     });
 
