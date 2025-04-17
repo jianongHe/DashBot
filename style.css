@@ -22,9 +22,9 @@ h1 {
 }
 
 canvas {
-    border: 2px solid #4a4a6a; /* Slightly lighter border */
-    display: block; /* Remove extra space below canvas */
-    background-color: #0f0f1a; /* Darker canvas background */
+    border: 2px dashed #4a4a6a; /* 虚线边框 */
+    display: block;
+    background-color: transparent; /* 背景透明 */
 }
 
 #ui {
