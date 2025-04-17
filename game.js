@@ -129,19 +129,25 @@ class Robot {
         // Update position if dashing
         if (this.isDashing) {
             this.x += this.dashVelX;
-            const spreadAngle = (Math.random() - 0.5) * 1.5; // 更广角度：-0.75 ~ 0.75 radians
-            const angle = this.angle + spreadAngle; // spray BACKWARD from dash direction (angle 是正向方向)
-            const distance = Math.random() * 25 + 10; // 拉远喷射范围
-            particles.push({
-                x: this.x + Math.cos(angle) * distance,
-                y: this.y + Math.sin(angle) * distance,
-                size: Math.random() * 10 + 10 + distance * 0.2, // 更远的粒子更大，更近的更小
-                rotation: Math.random() * Math.PI * 2,
-                vx: Math.cos(angle) * 2,
-                vy: Math.sin(angle) * 2,
-                life: Math.floor(Math.random() * 20 + 20) // 20 ~ 40
-            });
             this.y += this.dashVelY;
+            const currentSpeed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
+            const particleCount = Math.floor(currentSpeed / 2); // 每2单位速度生成1个屎粒子
+
+            for (let i = 0; i < particleCount; i++) {
+                const spreadAngle = (Math.random() - 0.5) * 1.5;
+                const dashAngle = Math.atan2(this.dashVelY, this.dashVelX);
+                const angle = dashAngle + Math.PI + spreadAngle; // 沿 dash 方向反向喷射
+                const distance = Math.random() * 25 + 10;
+                particles.push({
+                    x: this.x + Math.cos(angle) * distance,
+                    y: this.y + Math.sin(angle) * distance,
+                    size: Math.random() * 10 + 10 + distance * 0.2,
+                    rotation: Math.random() * Math.PI * 2,
+                    vx: Math.cos(angle) * currentSpeed * 0.1,
+                    vy: Math.sin(angle) * currentSpeed * 0.1,
+                    life: Math.floor(Math.random() * 20 + 20)
+                });
+            }
             // === boundary reflection (billiard‑style) ===
             if (this.x < this.radius) {
                 this.x = this.radius;
