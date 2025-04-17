@@ -19,7 +19,7 @@ const config = {
     },
     dash: {
         baseSpeed: 25, // Base speed units per frame at max charge
-        knockbackForce: 30, // How much the opponent is pushed
+        knockbackForce: 50, // Increased knockback force for enhanced hit back strength
     },
     friction: 0.90 // Slows down dashing bots slightly
 };
