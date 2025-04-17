@@ -116,6 +116,24 @@ class Robot {
         if (this.isDashing) {
             this.x += this.dashVelX;
             this.y += this.dashVelY;
+            // === boundary reflection (billiard‑style) ===
+            if (this.x < this.radius) {
+                this.x = this.radius;
+                this.dashVelX = Math.abs(this.dashVelX);
+            }
+            if (this.x > canvas.width - this.radius) {
+                this.x = canvas.width - this.radius;
+                this.dashVelX = -Math.abs(this.dashVelX);
+            }
+            if (this.y < this.radius) {
+                this.y = this.radius;
+                this.dashVelY = Math.abs(this.dashVelY);
+            }
+            if (this.y > canvas.height - this.radius) {
+                this.y = canvas.height - this.radius;
+                this.dashVelY = -Math.abs(this.dashVelY);
+            }
+            // === end reflection ===
 
             // Apply friction
             this.dashVelX *= config.friction;
@@ -123,9 +141,7 @@ class Robot {
 
             // Check if dash should end (low speed or out of bounds)
             const speed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
-            const outOfBounds = this.x < this.radius || this.x > canvas.width - this.radius || this.y < this.radius || this.y > canvas.height - this.radius;
-
-            if (speed < 0.5 || outOfBounds) {
+            if (speed < 0.5) {
                 this.isDashing = false; // Stop dashing
                 this.dashVelX = 0;
                 this.dashVelY = 0;
@@ -140,9 +156,6 @@ class Robot {
                 // --- End of Charge Buffering ---
             }
 
-            // Boundary collision (simple stop - applied even if dash continues briefly)
-            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
         }
     }
 
