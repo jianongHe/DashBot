@@ -190,13 +190,8 @@ class Robot {
 
         // Apply Knockback only if not dashing (prevents self-knockback during head-on collision resolution)
         if (!this.isDashing) {
-            const knockbackDist = config.dash.knockbackForce;
-            this.x += knockbackDirX * knockbackDist;
-            this.y += knockbackDirY * knockbackDist;
-
-            // Clamp position after knockback
-            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+            const knockbackDist = config.dash.knockbackForce * (damage / config.charge.maxDamage);
+            this.applyKnockback(knockbackDirX, knockbackDirY, knockbackDist);
         }
 
         if (this.hp <= 0) {
@@ -204,6 +199,32 @@ class Robot {
             endGame(players.find(p => p !== this)); // The other player wins
         }
         this.triggerHitEffect();
+    }
+
+    applyKnockback(dirX, dirY, distance) {
+        const totalFrames = 30;
+        let frame = 0;
+        const initialX = this.x;
+        const initialY = this.y;
+
+        const animateKnockback = () => {
+            if (frame >= totalFrames) return;
+
+            const progress = frame / totalFrames;
+            const easing = 1 - Math.pow(1 - progress, 3);
+            const moveDist = distance * easing;
+
+            this.x = initialX + dirX * moveDist;
+            this.y = initialY + dirY * moveDist;
+
+            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+
+            frame++;
+            requestAnimationFrame(animateKnockback);
+        };
+
+        requestAnimationFrame(animateKnockback);
     }
 
     triggerHitEffect() {
