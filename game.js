@@ -21,7 +21,14 @@ const config = {
         baseSpeed: 25, // Base speed units per frame at max charge
         knockbackForce: 50, // Increased knockback force for enhanced hit back strength
     },
-    friction: 0.90 // Slows down dashing bots slightly
+    friction: 0.90, // Slows down dashing bots slightly
+    zone: {
+        totalGameTime: 10000, // ms, total game time (e.g. 10 sec for testing)
+        shrinkStartTime: 3000, // ms, time when shrinking starts (e.g. 3 sec for testing)
+        shrinkDuration: 5000, // ms, total shrink time
+        minRadius: 100, // min radius of safe zone
+        damagePerSecondOutside: 10 // HP loss per second outside
+    }
 };
 
 // --- Game State ---
@@ -29,6 +36,9 @@ let players = [];
 let gameOver = false;
 let winner = null;
 let animationFrameId;
+let safeZoneRadius = canvas.width / 2; // Initial safe zone covers the whole canvas
+let safeZoneCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+let gameStartTime;
 
 // --- UI Elements ---
 const p1HpElement = document.getElementById('p1-hp');
@@ -330,6 +340,37 @@ function handleCollision(attacker, defender) {
 function gameLoop(timestamp) {
     if (gameOver) return;
 
+    const currentTime = Date.now();
+    const elapsed = currentTime - gameStartTime;
+
+    // Handle safe zone shrinking
+    if (elapsed > config.zone.shrinkStartTime && elapsed < config.zone.shrinkStartTime + config.zone.shrinkDuration) {
+        const t = (elapsed - config.zone.shrinkStartTime) / config.zone.shrinkDuration;
+        const maxRadius = canvas.width / 2;
+        safeZoneRadius = maxRadius - (maxRadius - config.zone.minRadius) * t;
+    } else if (elapsed >= config.zone.shrinkStartTime + config.zone.shrinkDuration) {
+        safeZoneRadius = config.zone.minRadius;
+    }
+
+    // Apply damage if outside safe zone
+    players.forEach(player => {
+        const dx = player.x - safeZoneCenter.x;
+        const dy = player.y - safeZoneCenter.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > safeZoneRadius) {
+            player.takeDamage(config.zone.damagePerSecondOutside * (1 / 60), 0, 0); // Assume 60fps
+        }
+    });
+
+    // Show countdown timer
+    const remaining = Math.max(0, config.zone.totalGameTime - elapsed);
+    const seconds = Math.ceil(remaining / 1000);
+    document.getElementById('timer').textContent = `Time Left: ${seconds}s`;
+
+    if (remaining <= 0) {
+        endGame(null);
+    }
+
     // Update State
     players.forEach(player => player.update());
     // Collision checks happen after updates
@@ -341,6 +382,7 @@ function gameLoop(timestamp) {
 
     // Draw (Reflects the very latest state)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawSafeZoneCircle();
     players.forEach(player => player.draw(ctx));
 
     animationFrameId = requestAnimationFrame(gameLoop);
@@ -399,6 +441,8 @@ function initGame() {
     gameOver = false;
     winner = null;
     gameOverElement.style.display = 'none';
+    gameStartTime = Date.now();
+    safeZoneRadius = canvas.width / 2;
 
     const padding = 100; // Initial distance from edge
     players = [
@@ -478,3 +522,11 @@ function setupStarfield() {
 }
 
 setupStarfield();
+
+function drawSafeZoneCircle() {
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(safeZoneCenter.x, safeZoneCenter.y, safeZoneRadius, 0, Math.PI * 2);
+    ctx.stroke();
+}
