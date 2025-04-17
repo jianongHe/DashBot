@@ -199,11 +199,24 @@ class Robot {
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
         }
 
-
         if (this.hp <= 0) {
             this.hp = 0;
             endGame(players.find(p => p !== this)); // The other player wins
         }
+        this.triggerHitEffect();
+    }
+
+    triggerHitEffect() {
+        const originalColor = this.color;
+        let flashes = 5;
+        const flashInterval = setInterval(() => {
+            this.color = this.color === 'white' ? originalColor : 'white';
+            flashes--;
+            if (flashes === 0) {
+                clearInterval(flashInterval);
+                this.color = originalColor;
+            }
+        }, 50);
     }
 }
 
@@ -217,6 +230,7 @@ function checkCollisions() {
     } else if (p2.isDashing && !p1.isDashing) {
         handleCollision(p2, p1);
     }
+
     // Head-on collision
     else if (p1.isDashing && p2.isDashing) {
         const dx = p2.x - p1.x;
