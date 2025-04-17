@@ -18,10 +18,10 @@ const config = {
         maxChargeTime: 1500, // milliseconds
     },
     dash: {
-        baseSpeed: 15, // Base speed units per frame at max charge
+        baseSpeed: 25, // Base speed units per frame at max charge
         knockbackForce: 30, // How much the opponent is pushed
     },
-    friction: 0.98 // Slows down dashing bots slightly
+    friction: 0.90 // Slows down dashing bots slightly
 };
 
 // --- Game State ---
