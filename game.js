@@ -411,10 +411,10 @@ function endGame(winningPlayer) {
 
     if (winningPlayer) {
         console.log(`Game Over! Player ${winner.id} wins!`);
-        winnerMessageElement.textContent = `玩家 ${winner.id} (${winner.color}) 获胜!`;
+        winnerMessageElement.textContent = `Player ${winner.id} (${winner.color}) wins!`;
     } else {
         console.log("Game Over! It's a draw!");
-        winnerMessageElement.textContent = `平局!`; // Handle draw case
+        winnerMessageElement.textContent = `Draw!`; // Handle draw case
     }
     gameOverElement.style.display = 'block';
 
