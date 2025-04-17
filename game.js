@@ -36,7 +36,7 @@ let players = [];
 let gameOver = false;
 let winner = null;
 let animationFrameId;
-let safeZoneRadius = canvas.width / 2; // Initial safe zone covers the whole canvas
+let safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2; // 初始为对角线的一半，确保覆盖全画布
 let safeZoneCenter = { x: canvas.width / 2, y: canvas.height / 2 };
 let gameStartTime;
 
@@ -47,6 +47,7 @@ const p1ChargeElement = document.getElementById('p1-charge');
 const p2ChargeElement = document.getElementById('p2-charge');
 const gameOverElement = document.getElementById('game-over');
 const winnerMessageElement = document.getElementById('winner-message');
+const shrinkTimerElement = document.getElementById('shrink-timer');
 
 // --- Robot Class ---
 class Robot {
@@ -377,6 +378,11 @@ function gameLoop(timestamp) {
     const remaining = Math.max(0, config.zone.totalGameTime - elapsed);
     const seconds = Math.ceil(remaining / 1000);
     document.getElementById('timer').textContent = `Time Left: ${seconds}s`;
+    const shrinkRemaining = Math.max(0, config.zone.shrinkStartTime - elapsed);
+    const shrinkSeconds = Math.ceil(shrinkRemaining / 1000);
+    shrinkTimerElement.textContent = shrinkRemaining > 0
+        ? `Shrink In: ${shrinkSeconds}s`
+        : 'Shrinking...';
 
     if (remaining <= 0) {
         endGame(null);
@@ -453,7 +459,7 @@ function initGame() {
     winner = null;
     gameOverElement.style.display = 'none';
     gameStartTime = Date.now();
-    safeZoneRadius = canvas.width / 2;
+    safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2;
 
     const padding = 100; // Initial distance from edge
     players = [
