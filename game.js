@@ -29,6 +29,7 @@ const config = {
         maxHp: 300,
         pointerLength: 30,
         angleSpeed: 0.03, // Radians per frame (how fast the pointer spins)
+        angleSpeedFast: 0.05,
         pointerShowsDashDirection: true, // true = pointer shows MOVEMENT direction, false = pointer shows FACING/POOP direction
         hitFlashFrames: 5, // Number of flashes on hit
         hitFlashIntervalMs: 50, // Duration of each flash
@@ -408,9 +409,22 @@ class Robot {
     update() {
         // Rotate facing angle (pointer) if not dashing
         if (!this.isDashing) {
-            // Note: Angle always rotates, regardless of charging status
-            this.angle = (this.angle + config.robot.angleSpeed) % (Math.PI * 2);
-            this.imageAngle = (this.imageAngle + config.robot.angleSpeed * 0.4) % (Math.PI * 2); // 比指针慢
+            const zone = config.zone;
+            const t = Date.now() - gameStartTime;
+            const shrinkStart = zone.shrinkStartTime;
+            const shrinkEnd = shrinkStart + zone.shrinkDuration;
+
+            let shrinkProgress = 0;
+            if (t > shrinkStart) {
+                shrinkProgress = Math.min(1, (t - shrinkStart) / (zone.shrinkDuration));
+            }
+
+            const speed = config.robot.angleSpeed +
+                (config.robot.angleSpeedFast - config.robot.angleSpeed) * shrinkProgress;
+
+            this.angle = (this.angle + speed) % (Math.PI * 2);
+            this.imageAngle = (this.imageAngle + speed * 0.4) % (Math.PI * 2);
+
         }
 
         // Update charge power visual if charging
