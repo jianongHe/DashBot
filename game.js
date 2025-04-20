@@ -1280,6 +1280,18 @@ function hideGameOverScreen() {
     if (ui.gameOver) {
         ui.gameOver.style.display = 'none';
     }
+
+    showReadyBox()
+}
+
+function hideReadyBox() {
+    ui.readyContainer.style.display = 'none';
+    ui.ui.style.pointerEvents = 'none';
+}
+
+function showReadyBox() {
+    ui.readyContainer.style.display = 'flex';
+    ui.ui.style.pointerEvents = 'auto';
 }
 
 // --- Game Management ---
@@ -1290,8 +1302,7 @@ function initGame() {
     winner = null;
     particles = []; // Clear particles from previous game
     ui.gameOver.style.display = 'none'; // Hide game over screen
-    ui.readyContainer.style.display = 'none';
-    ui.ui.style.pointerEvents = 'none';
+    hideReadyBox()
     gameStartTime = Date.now();
 
     // Reset safe zone
