@@ -225,6 +225,7 @@ let p2Ready = false; // Player 2 ready status
 // --- UI Element References ---
 // Getting references to HTML elements for UI updates
 const ui = {
+    ui: document.getElementById('ui'),
     p1: {
         hp: document.getElementById('p1-hp'),
         charge: document.getElementById('p1-charge'),
@@ -392,7 +393,7 @@ class Robot {
         this.lastHitEffectTime = currentTime;
 
         // 原有闪烁逻辑
-        this.hitOverlayAlpha = 0.6;
+        this.hitOverlayAlpha = 1;
         let flashes = config.robot.hitFlashFrames;
         const flashInterval = setInterval(() => {
             this.color = this.color === 'white' ? this.originalColor : 'white';
@@ -1085,13 +1086,13 @@ function drawSafeZone() {
     // ⑥ 顶部提示
     if (elapsedMs < shrinkStart) {
         const { text, color } = vis.hudText.shrinkSoon;
-        drawHudText(text, canvas.width / 2, 50, color);
+        drawHudText(text, canvas.width / 2, 70, color);
     } else if (elapsedMs < shrinkEnd) {
         const { text, color } = vis.hudText.shrinking;
-        drawHudText(text, canvas.width / 2, 50, color);
+        drawHudText(text, canvas.width / 2, 70, color);
     } else {
         const { text, color } = vis.hudText.closed;
-        drawHudText(text, canvas.width / 2, 50, color);
+        drawHudText(text, canvas.width / 2, 70, color);
     }
 
     if (config.zone.visual.outerLightning.enabled) {
@@ -1289,6 +1290,8 @@ function initGame() {
     winner = null;
     particles = []; // Clear particles from previous game
     ui.gameOver.style.display = 'none'; // Hide game over screen
+    ui.readyContainer.style.display = 'none';
+    ui.ui.style.pointerEvents = 'none';
     gameStartTime = Date.now();
 
     // Reset safe zone

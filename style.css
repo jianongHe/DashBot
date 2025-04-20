@@ -22,8 +22,11 @@ h1 {
 
 #game-container {
     position: relative; /* Needed for absolute positioning of UI elements */
-    /*width: 800px; !* Match canvas width *!*/
-    /*height: 600px; !* Match canvas height *!*/
+    width: 100%; /* Match canvas width */
+    height: 100%; /* Match canvas height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 canvas {
@@ -33,21 +36,30 @@ canvas {
 }
 
 #ui {
+    height: 760px;
+    width: 1280px;
     position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.1em;
+    z-index: 5;
+}
+
+.player-info {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     display: flex;
     justify-content: space-between;
-    color: white;
-    pointer-events: none; /* UI doesn't block clicks on canvas */
-    font-size: 1.1em;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
 }
 
 #player1-info, #player2-info {
-    background-color: rgba(0, 0, 0, 0.5);
     padding: 5px 10px;
-    border-radius: 5px;
 }
 
 .charge-indicator {
@@ -118,17 +130,6 @@ canvas {
     font-size: 1em;
 }
 
-.ready-container {
-    color: white;
-    text-align: center;
-    margin-bottom: 20px;
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-}
-
 .ready-button {
     width: 120px;
 }
@@ -148,13 +149,28 @@ canvas {
     width: 120px;
 }
 
-#ready-container {
-    background: rgba(0, 0, 0, 0.4);
-    padding: 8px 0;
-    border-radius: 12px;
+.ready-container {
     color: white;
-    font-weight: bold;
+    text-align: center;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.ready-box {
+    padding: 30px;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
+    border-radius: 20px
+}
+
+.ready-p-item:not(:last-of-type) {
+    margin-bottom: 40px;
 }
 
 body {
