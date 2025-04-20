@@ -139,8 +139,8 @@ const config = {
             },
             radiantLightning: {
                 enabled: true,
-                count: 1,                  // 同时几道放射性闪电
-                maxLength: 300,            // 每道最大长度
+                count: 2,                  // 同时几道放射性闪电
+                maxLength: 500,            // 每道最大长度
                 segmentLength: 30,         // 每段闪电的长度
                 forkChance: 0.3,           // 每段有概率分叉
                 maxForkDepth: 2,           // 最多生成一次子闪电
