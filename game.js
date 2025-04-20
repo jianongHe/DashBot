@@ -32,15 +32,28 @@ const config = {
         hitFlashIntervalMs: 50, // Duration of each flash
         // 新增：圆环指针配置
         pointerRing: {
-            numBars: 72,              // 圆环包含的竖条数量 (越多越平滑)
-            baseRadiusOffset: 5,      // 圆环基线距离机器人边缘的距离
-            baseBarHeight: 10,         // 竖条的基础（最小）高度
-            maxPointerHeightBoost: 13,// 指向方向的竖条最大额外高度
-            waveAmplitude: 2,         // 基础波动的振幅（高度变化）
-            waveSpeed: 0.005,         // 波动动画的速度 (rad/ms)
-            waveSpatialFrequency: 6,  // 空间频率，影响同时有多少波峰波谷
-            pointerFocusExponent: 100, // 指针高亮区域的聚焦程度（值越大，高亮区域越窄）
-            barWidth: 2,              // 每个竖条的线宽
+            normal: {
+                numBars: 36,              // 圆环包含的竖条数量 (越多越平滑)
+                baseRadiusOffset: 3,      // 圆环基线距离机器人边缘的距离
+                baseBarHeight: 6,         // 竖条的基础（最小）高度
+                maxPointerHeightBoost: 11,// 指向方向的竖条最大额外高度
+                waveAmplitude: 2,         // 基础波动的振幅（高度变化）
+                waveSpeed: 0.005,         // 波动动画的速度 (rad/ms)
+                waveSpatialFrequency: 6,  // 空间频率，影响同时有多少波峰波谷
+                pointerFocusExponent: 60, // 指针高亮区域的聚焦程度（值越大，高亮区域越窄）
+                barWidth: 2,              // 每个竖条的线宽
+            },
+            charged: {
+                numBars: 42,
+                baseRadiusOffset: 5,
+                baseBarHeight: 10,
+                maxPointerHeightBoost: 20,
+                waveAmplitude: 6,
+                waveSpeed: 0.01,
+                waveSpatialFrequency: 12,
+                pointerFocusExponent: 150,
+                barWidth: 4,
+            },
             color: {
                 red: {
                     baseColor: 'rgba(210,69,69,0.55)', // 竖条的基础颜色
@@ -51,8 +64,7 @@ const config = {
                     highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
                 }
             }
-
-        }
+        },
     },
     charge: {            barWidth: 2,              // 每个竖条的线宽
         minPower: 0.2, // Minimum dash power proportion (0 to 1)
@@ -494,65 +506,66 @@ class Robot {
     // 新增：绘制圆环指针的方法
     drawPointerRing(ctx) {
         const ringConfig = config.robot.pointerRing;
-        if (!ringConfig) return; // 如果没有配置则不绘制
+        if (!ringConfig) return;
 
-        // 1. 确定目标方向角度 (和以前一样)
-        let displayAngle = config.robot.pointerShowsDashDirection ? (this.angle + Math.PI) : this.angle;
-        displayAngle = (displayAngle + Math.PI * 2) % (Math.PI * 2); // 确保角度在 0 到 2PI 之间
-
-        // 2. 获取当前时间用于动画
         const currentTime = Date.now();
+        let displayAngle = config.robot.pointerShowsDashDirection ? (this.angle + Math.PI) : this.angle;
+        displayAngle = (displayAngle + Math.PI * 2) % (Math.PI * 2);
 
-        // 获取波形颜色
+        // 颜色处理
         const baseColor = ringConfig.color[this.originalColor].baseColor;
         const highlightColor = ringConfig.color[this.originalColor].highlightColor;
-
-        // 3. 解析基础和高亮颜色 (只在需要时解析一次)
-        // 注意：更优化的做法是在初始化时解析并存储颜色数组
         const baseColorRGBA = parseRGBA(baseColor);
         const highlightColorRGBA = parseRGBA(highlightColor);
 
-        // 4. 计算圆环的基础半径
-        const baseRingRadius = this.radius + ringConfig.baseRadiusOffset;
+        const baseRingRadius = this.radius + ringConfig.normal.baseRadiusOffset;
 
-        // 5. 循环绘制每个竖条
-        for (let i = 0; i < ringConfig.numBars; i++) {
-            const barAngle = (i / ringConfig.numBars) * Math.PI * 2;
+        // 蓄力进度
+        let chargeProgress = 0;
+        if (this.isCharging) {
+            const chargeDuration = Math.min(currentTime - this.chargeStartTime, config.charge.maxChargeTime);
+            chargeProgress = chargeDuration / config.charge.maxChargeTime;
+        }
 
-            // 计算竖条的起始点 (在基础圆环上)
+        // 插值函数
+        const lerpParam = (key) => {
+            const from = ringConfig.normal[key];
+            const to = ringConfig.charged[key];
+            return from + (to - from) * chargeProgress;
+        };
+
+        // 动态参数
+        const dynamicBarWidth = lerpParam('barWidth');
+        const dynamicWaveAmplitude = lerpParam('waveAmplitude');
+        const dynamicWaveSpeed = lerpParam('waveSpeed');
+        const dynamicWaveSpatialFrequency = lerpParam('waveSpatialFrequency');
+        const dynamicNumBars = Math.round(lerpParam('numBars'));
+        const dynamicMaxPointerHeightBoost = lerpParam('maxPointerHeightBoost');
+        const dynamicPointerFocusExponent = lerpParam('pointerFocusExponent');
+
+        // 绘制竖条
+        for (let i = 0; i < dynamicNumBars; i++) {
+            const barAngle = (i / dynamicNumBars) * Math.PI * 2;
+
             const startX = this.x + Math.cos(barAngle) * baseRingRadius;
             const startY = this.y + Math.sin(barAngle) * baseRingRadius;
 
-            // 计算当前竖条角度与目标显示角度的最小差值 (处理环绕)
             let angleDiff = Math.abs(barAngle - displayAngle);
-            angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff); // 考虑 0 度和 359 度是接近的
+            angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+            const targetHeightFactor = Math.pow(Math.cos(Math.min(angleDiff, Math.PI / 2)), dynamicPointerFocusExponent);
 
-            // 计算目标高度因子 (决定竖条因为接近目标方向而增加多少高度)
-            // 使用指数衰减的余弦函数，使得靠近目标方向时因子接近 1，远离时快速衰减到 0
-            // pointerFocusExponent 控制聚焦程度，值越大，高亮区域越窄
-            const targetHeightFactor = Math.pow(Math.cos(Math.min(angleDiff, Math.PI / 2)), ringConfig.pointerFocusExponent);
+            const waveOffset = Math.sin(currentTime * dynamicWaveSpeed + barAngle * dynamicWaveSpatialFrequency) * dynamicWaveAmplitude;
 
+            const barHeight = ringConfig.normal.baseBarHeight + targetHeightFactor * dynamicMaxPointerHeightBoost + waveOffset;
+            const finalBarHeight = Math.max(0, barHeight);
 
-            // 计算波动高度偏移
-            const waveOffset = Math.sin(currentTime * ringConfig.waveSpeed + barAngle * ringConfig.waveSpatialFrequency)
-                * ringConfig.waveAmplitude;
-
-            // 计算最终的竖条高度
-            const barHeight = ringConfig.baseBarHeight                  // 基础高度
-                + targetHeightFactor * ringConfig.maxPointerHeightBoost // 指针方向的额外高度
-                + waveOffset;                                // 波动高度
-            const finalBarHeight = Math.max(0, barHeight); // 确保高度不为负
-
-            // 计算竖条的结束点
             const endX = this.x + Math.cos(barAngle) * (baseRingRadius + finalBarHeight);
             const endY = this.y + Math.sin(barAngle) * (baseRingRadius + finalBarHeight);
 
-            // 计算竖条颜色 (根据 targetHeightFactor 在基础色和高亮色之间插值)
             const barColor = lerpColor(baseColorRGBA, highlightColorRGBA, targetHeightFactor);
 
-            // 绘制竖条
             ctx.strokeStyle = barColor;
-            ctx.lineWidth = ringConfig.barWidth;
+            ctx.lineWidth = dynamicBarWidth;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.lineTo(endX, endY);
