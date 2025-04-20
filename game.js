@@ -41,8 +41,17 @@ const config = {
             waveSpatialFrequency: 6,  // 空间频率，影响同时有多少波峰波谷
             pointerFocusExponent: 100, // 指针高亮区域的聚焦程度（值越大，高亮区域越窄）
             barWidth: 2,              // 每个竖条的线宽
-            baseColor: 'rgba(99,136,162,0.4)', // 竖条的基础颜色
-            highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
+            color: {
+                red: {
+                    baseColor: 'rgba(210,69,69,0.55)', // 竖条的基础颜色
+                    highlightColor: 'rgb(238,126,126)' // 指针方向竖条的高亮颜色
+                },
+                blue: {
+                    baseColor: 'rgba(99,136,162,0.4)', // 竖条的基础颜色
+                    highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
+                }
+            }
+
         }
     },
     charge: {            barWidth: 2,              // 每个竖条的线宽
@@ -60,7 +69,7 @@ const config = {
     friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
     zone: {
         totalGameTime: 100000, // ms, total duration of a match
-        shrinkStartTime: 30000, // ms, when the safe zone starts shrinking
+        shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
         shrinkDuration: 5000, // ms, how long the shrinking process takes
         minRadius: 100, // Smallest radius the safe zone will reach
         damagePerTickOutside: (10 / FRAMES_PER_SECOND) // <--- CORRECTED CALCULATION
@@ -494,10 +503,14 @@ class Robot {
         // 2. 获取当前时间用于动画
         const currentTime = Date.now();
 
+        // 获取波形颜色
+        const baseColor = ringConfig.color[this.originalColor].baseColor;
+        const highlightColor = ringConfig.color[this.originalColor].highlightColor;
+
         // 3. 解析基础和高亮颜色 (只在需要时解析一次)
         // 注意：更优化的做法是在初始化时解析并存储颜色数组
-        const baseColorRGBA = parseRGBA(ringConfig.baseColor) || [100, 100, 120, 0.4];
-        const highlightColorRGBA = parseRGBA(ringConfig.highlightColor) || [255, 255, 255, 1.0];
+        const baseColorRGBA = parseRGBA(baseColor);
+        const highlightColorRGBA = parseRGBA(highlightColor);
 
         // 4. 计算圆环的基础半径
         const baseRingRadius = this.radius + ringConfig.baseRadiusOffset;
