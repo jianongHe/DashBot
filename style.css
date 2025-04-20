@@ -17,8 +17,8 @@ h1 {
 
 #game-container {
     position: relative; /* Needed for absolute positioning of UI elements */
-    width: 800px; /* Match canvas width */
-    height: 600px; /* Match canvas height */
+    /*width: 800px; !* Match canvas width *!*/
+    /*height: 600px; !* Match canvas height *!*/
 }
 
 canvas {

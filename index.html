@@ -9,14 +9,17 @@
 <body>
 <div id="star-background"></div>
 <h1>PoopBot</h1>
-<div id="timer" style="color: white; font-size: 1.2em; margin-bottom: 10px;">Time Left: </div>
-<div id="shrink-timer" style="color: #f88; font-size: 1em; margin-bottom: 10px;">Shrink In: </div>
-<div id="ready-container" style="color: white; text-align: center; margin-bottom: 20px; display: flex;">
-    <p><button id="p1-ready-btn">Player 1 Ready</button> <span id="p1-ready-status">Not Ready</span></p>
-    <p><button id="p2-ready-btn">Player 2 Ready</button> <span id="p2-ready-status">Not Ready</span></p>
+<div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
+    <div id="timer" style="color: white; font-size: 1.2em; margin-bottom: 10px;">Time Left: </div>
+    <div id="shrink-timer" style="color: #f88; font-size: 1em; margin-bottom: 10px;">Shrink In: </div>
+</div>
+
+<div id="ready-container" style="color: white; text-align: center; margin-bottom: 20px; display: flex;width: 100%;flex-direction: row; align-items: center; justify-content: center;">
+    <button id="p1-ready-btn" >Player 1 Ready</button> <span id="p1-ready-status" style="margin-right: 20px">Not Ready</span>
+    <button id="p2-ready-btn">Player 2 Ready</button> <span id="p2-ready-status">Not Ready</span>
 </div>
 <div id="game-container">
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <canvas id="gameCanvas" width="1280" height="760"></canvas>
     <div id="ui">
         <div id="player1-info">
             Player 1 (Mouse): <span id="p1-hp">100</span> HP

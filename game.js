@@ -1252,7 +1252,6 @@ function handleKeyUp(event) {
 
 function checkBothReady() {
     if (p1Ready && p2Ready) {
-        ui.readyContainer.style.display = 'none'; // Hide ready buttons/status
         initGame(); // Start the game
     }
 }
@@ -1352,14 +1351,13 @@ function endGame(winningPlayer) {
 
     // Reset ready state for rematch
     resetReadyState();
-    ui.readyContainer.style.display = 'block'; // Show ready container again
 }
 
 function resetReadyState() {
     p1Ready = false;
     p2Ready = false;
-    ui.p1.readyBtn.disabled = false;
-    ui.p2.readyBtn.disabled = false;
+    // ui.p1.readyBtn.disabled = false;
+    // ui.p2.readyBtn.disabled = false;
     ui.p1.readyBtn.textContent = 'Player 1 Ready';
     ui.p2.readyBtn.textContent = 'Player 2 Ready';
     ui.p1.readyStatus.textContent = 'Not Ready';
@@ -1407,7 +1405,6 @@ function main() {
     setupStarfield(); // Initialize background
     setupReadyButtons(); // Set up the ready system listeners
     resetReadyState(); // Ensure initial state is 'not ready'
-    ui.readyContainer.style.display = 'block'; // Show the ready container initially
     ui.gameOver.style.display = 'none'; // Hide game over screen initially
 
     // The game will start via checkBothReady() when both players click their ready buttons.
