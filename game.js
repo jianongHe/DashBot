@@ -56,11 +56,11 @@ const config = {
             },
             color: {
                 red: {
-                    baseColor: 'rgba(210,69,69,0.55)', // 竖条的基础颜色
+                    baseColor: 'rgba(204,72,72,0.87)', // 竖条的基础颜色
                     highlightColor: 'rgb(238,126,126)' // 指针方向竖条的高亮颜色
                 },
                 blue: {
-                    baseColor: 'rgba(99,136,162,0.4)', // 竖条的基础颜色
+                    baseColor: 'rgba(101,150,183,0.87)', // 竖条的基础颜色
                     highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
                 }
             }
@@ -84,7 +84,39 @@ const config = {
         shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
         shrinkDuration: 5000, // ms, how long the shrinking process takes
         minRadius: 100, // Smallest radius the safe zone will reach
-        damagePerTickOutside: (10 / FRAMES_PER_SECOND) // <--- CORRECTED CALCULATION
+        damagePerTickOutside: (10 / FRAMES_PER_SECOND), // <--- CORRECTED CALCULATION
+        visual: {
+            outerMaskColor: 'rgba(50, 0, 0, 0.5)',
+            grid: {
+                spacing: 20,
+                color: 'rgba(255,0,0,0.08)',
+                lineWidth: 1,
+            },
+            glow: {
+                baseWidth: 4,
+                pulseRange: 2,
+                pulseSpeed: 0.005,
+                innerAlpha: 0.2,
+                outerAlpha: 1.0,
+            },
+            edgeParticles: {
+                count: 20,
+                radius: 2,
+                color: 'rgba(255,180,180,0.6)',
+                rotationSpeed: 0.001,
+            },
+            shockwave: {
+                duration: 1000,
+                maxRadiusBoost: 30,
+                color: 'rgba(255, 100, 100, ALPHA)',
+                lineWidth: 5,
+            },
+            hudText: {
+                shrinkSoon: { text: '⚠ Safe Zone Shrinking Soon', color: 'orange' },
+                shrinking: { text: '⚠ Shrinking...', color: 'red' },
+                closed: { text: '☢ Danger Outside Zone', color: 'darkred' },
+            },
+        },
     },
     particle: {
         maxCount: 300, // Max number of poop particles
@@ -761,11 +793,109 @@ function clearCanvas() {
 }
 
 function drawSafeZone() {
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Red semi-transparent circle
-    ctx.lineWidth = 3;
+    const cx = safeZoneCenter.x;
+    const cy = safeZoneCenter.y;
+    const r = safeZoneRadius;
+    const t = Date.now();
+
+    const vis = config.zone.visual;
+
+    // ① 圈外遮罩
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(safeZoneCenter.x, safeZoneCenter.y, safeZoneRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.rect(canvas.width, 0, -canvas.width, canvas.height);
+    ctx.clip();
+    ctx.fillStyle = vis.outerMaskColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // ② 网格
+    drawOuterGridMask(cx, cy, r, vis.grid);
+
+    // ③ 描边发光
+    const pulse = 0.3 + 0.2 * Math.sin(t * vis.glow.pulseSpeed);
+    const gradient = ctx.createRadialGradient(cx, cy, r - 10, cx, cy, r);
+    gradient.addColorStop(0, `rgba(255,255,255,${pulse * vis.glow.innerAlpha})`);
+    gradient.addColorStop(1, `rgba(255,80,80,${pulse * vis.glow.outerAlpha})`);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = vis.glow.baseWidth + vis.glow.pulseRange * pulse;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
+
+    // ④ 圆周粒子
+    const ep = vis.edgeParticles;
+    for (let i = 0; i < ep.count; i++) {
+        const angle = (t * ep.rotationSpeed + i * (Math.PI * 2 / ep.count)) % (Math.PI * 2);
+        const px = cx + Math.cos(angle) * r;
+        const py = cy + Math.sin(angle) * r;
+        ctx.beginPath();
+        ctx.fillStyle = ep.color;
+        ctx.arc(px, py, ep.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ⑤ 缩圈冲击波
+    const elapsedMs = t - gameStartTime;
+    const shrinkStart = config.zone.shrinkStartTime;
+    const shrinkEnd = shrinkStart + config.zone.shrinkDuration;
+    if (elapsedMs > shrinkStart && elapsedMs < shrinkStart + vis.shockwave.duration) {
+        const progress = (elapsedMs - shrinkStart) / vis.shockwave.duration;
+        const shockRadius = r + vis.shockwave.maxRadiusBoost * (1 - progress);
+        ctx.beginPath();
+        ctx.strokeStyle = vis.shockwave.color.replace('ALPHA', (1 - progress).toFixed(2));
+        ctx.lineWidth = vis.shockwave.lineWidth * (1 - progress);
+        ctx.arc(cx, cy, shockRadius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    // ⑥ 顶部提示
+    if (elapsedMs < shrinkStart) {
+        const { text, color } = vis.hudText.shrinkSoon;
+        drawHudText(text, canvas.width / 2, 50, color);
+    } else if (elapsedMs < shrinkEnd) {
+        const { text, color } = vis.hudText.shrinking;
+        drawHudText(text, canvas.width / 2, 50, color);
+    } else {
+        const { text, color } = vis.hudText.closed;
+        drawHudText(text, canvas.width / 2, 50, color);
+    }
+}
+
+function drawOuterGridMask(cx, cy, r, gridCfg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.rect(canvas.width, 0, -canvas.width, canvas.height);
+    ctx.clip();
+
+    ctx.strokeStyle = gridCfg.color;
+    ctx.lineWidth = gridCfg.lineWidth;
+    for (let x = 0; x < canvas.width; x += gridCfg.spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += gridCfg.spacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawHudText(text, x, y, color = 'white') {
+    ctx.save();
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 4;
+    ctx.fillText(text, x, y);
+    ctx.restore();
 }
 
 function drawParticles() {
