@@ -105,13 +105,13 @@ const config = {
                 count: 20,
                 radius: 2,
                 color: 'rgba(248,180,255,0.6)',
-                rotationSpeedNormal: 0.0004,   // ← 缩圈前/后速度
+                rotationSpeedNormal: 0.0001,   // ← 缩圈前/后速度
                 rotationSpeedFast:  0.0012,    // ← 缩圈中速度
             },
             shockwave: {
                 duration: 1000,
                 maxRadiusBoost: 30,
-                color: 'rgba(255, 100, 100, ALPHA)',
+                color: 'rgb(221,100,255, ALPHA)',
                 lineWidth: 5,
             },
             hudText: {
@@ -748,7 +748,7 @@ function updateRadiantLightning() {
     radiantBolts = radiantBolts.filter(b => now - b.spawnTime < cfg.lifespan);
 
     // 控制刷新间隔：0.3~1秒之间波动
-    if (now - lastRadiantLightningTime > 1000 + Math.random() * 2000) {
+    if (now - lastRadiantLightningTime > 1500 + Math.random() * 3500) {
         lastRadiantLightningTime = now;
 
         const angle = Math.random() * Math.PI * 2;
@@ -826,8 +826,8 @@ function drawRadiantLightning() {
         ctx.save();
         ctx.strokeStyle = strokeStyle;
         ctx.lineWidth = cfg.lineWidth;
-        ctx.shadowColor = 'rgba(255,255,255,0.5)';
-        ctx.shadowBlur = 8;
+        // ctx.shadowColor = 'rgba(255,255,255,0.5)';
+        // ctx.shadowBlur = 8;
         ctx.beginPath();
         bolt.segments.forEach((seg, idx) => {
             const ratio = idx / bolt.segments.length;
@@ -1031,7 +1031,7 @@ function drawSafeZone() {
     const pulse = 0.3 + 0.2 * Math.sin(t * vis.glow.pulseSpeed);
     const gradient = ctx.createRadialGradient(cx, cy, r - 10, cx, cy, r);
     gradient.addColorStop(0, `rgba(255,255,255,${pulse * vis.glow.innerAlpha})`);
-    gradient.addColorStop(1, `rgba(255,80,80,${pulse * vis.glow.outerAlpha})`);
+    gradient.addColorStop(1, `rgb(134, 44, 140, ${pulse * vis.glow.outerAlpha})`);
     ctx.strokeStyle = gradient;
     ctx.lineWidth = vis.glow.baseWidth + vis.glow.pulseRange * pulse;
     ctx.beginPath();
