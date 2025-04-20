@@ -13,6 +13,8 @@ blueUfoImage.src = 'assets/blue_ufo.png';
 // --- Canvas & Rendering Context ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+let lightningBolts = [];
+let radiantBolts = [];
 
 // --- Constants ---
 const MS_PER_SECOND = 1000;
@@ -82,14 +84,14 @@ const config = {
     zone: {
         totalGameTime: 100000, // ms, total duration of a match
         shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
-        shrinkDuration: 5000, // ms, how long the shrinking process takes
+        shrinkDuration: 8000, // ms, how long the shrinking process takes
         minRadius: 100, // Smallest radius the safe zone will reach
         damagePerTickOutside: (10 / FRAMES_PER_SECOND), // <--- CORRECTED CALCULATION
         visual: {
-            outerMaskColor: 'rgba(50, 0, 0, 0.5)',
+            outerMaskColor: 'rgba(50,0,42,0.5)',
             grid: {
                 spacing: 20,
-                color: 'rgba(255,0,0,0.08)',
+                color: 'rgba(221,0,255,0.08)',
                 lineWidth: 1,
             },
             glow: {
@@ -102,8 +104,9 @@ const config = {
             edgeParticles: {
                 count: 20,
                 radius: 2,
-                color: 'rgba(255,180,180,0.6)',
-                rotationSpeed: 0.001,
+                color: 'rgba(248,180,255,0.6)',
+                rotationSpeedNormal: 0.0004,   // ← 缩圈前/后速度
+                rotationSpeedFast:  0.0012,    // ← 缩圈中速度
             },
             shockwave: {
                 duration: 1000,
@@ -116,6 +119,43 @@ const config = {
                 shrinking: { text: '⚠ Shrinking...', color: 'red' },
                 closed: { text: '☢ Danger Outside Zone', color: 'darkred' },
             },
+            lightning: {
+                enabled: false,
+                color: 'rgba(180,0,255,0.4)',
+                count: 3,           // 每帧画几道闪电
+                segments: 20,       // 每道闪电多少段
+                wiggle: 12,         // 最大扰动幅度
+                width: 1.5,         // 闪电线宽
+            },
+            outerLightning: {
+                enabled: false,
+                color: 'rgba(180,0,255,0.3)',
+                lineWidth: 2,
+                count: 1,
+                maxSegments: 10,
+                maxOffset: 25,
+                lifespan: 400, // 每道闪电持续时间（ms）
+            },
+            radiantLightning: {
+                enabled: true,
+                count: 1,                  // 同时几道放射性闪电
+                maxLength: 300,            // 每道最大长度
+                segmentLength: 30,         // 每段闪电的长度
+                forkChance: 0.3,           // 每段有概率分叉
+                maxForkDepth: 2,           // 最多生成一次子闪电
+                color: 'rgba(180,0,255,ALPHA)', // 注意这里用 ALPHA 占位符
+                lineWidth: 1.5,
+                lifespan: 1600,
+                lineWidthStart: 1.5,
+                lineWidthEnd: 0.2, // 闪电尖端越细
+                extraFlashChance: 0.2,  // ← 有 20% 概率闪得更久
+                alphaStages: [
+                    { t: 0.0, alpha: 0.9 },   // 初始闪亮
+                    { t: 0.2, alpha: 0.6 },   // 闪一下暗
+                    { t: 0.4, alpha: 1 },   // 再闪一下亮
+                    { t: 1.0, alpha: 0.0 },   // 最终消失
+                ],
+            }
         },
     },
     particle: {
@@ -688,12 +728,183 @@ function gameLoop(timestamp) {
     drawSafeZone();
     drawParticles();
     drawPlayers();
+    updateLightningBolts();
+    updateRadiantLightning();
+    drawRadiantLightning();    // ← 每道闪电都重绘，而且带 alpha
 
     // Request next frame
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 // --- Game Loop Helper Functions ---
+
+let lastRadiantLightningTime = 0; // 放在全局定义
+
+function updateRadiantLightning() {
+    const cfg = config.zone.visual.radiantLightning;
+    const now = Date.now();
+
+    // 清理旧闪电
+    radiantBolts = radiantBolts.filter(b => now - b.spawnTime < cfg.lifespan);
+
+    // 控制刷新间隔：0.3~1秒之间波动
+    if (now - lastRadiantLightningTime > 1000 + Math.random() * 2000) {
+        lastRadiantLightningTime = now;
+
+        const angle = Math.random() * Math.PI * 2;
+        const startDist = Math.max(canvas.width, canvas.height) * 0.7 + Math.random() * 100;
+        const startX = safeZoneCenter.x + Math.cos(angle) * startDist;
+        const startY = safeZoneCenter.y + Math.sin(angle) * startDist;
+
+        radiantBolts.push({
+            spawnTime: now,
+            segments: generateLightningPath(startX, startY, angle, 0, cfg),
+            useExtraFlash: Math.random() < cfg.extraFlashChance // ← 标记是否用闪光节奏
+        });
+    }
+}
+
+function generateLightningPath(x, y, targetAngle, depth, cfg) {
+    const segments = [];
+    const len = cfg.maxLength * (depth === 0 ? 1 : 0.5); // 分叉更短
+    const segLen = cfg.segmentLength;
+    const steps = Math.floor(len / segLen);
+
+    for (let i = 0; i < steps; i++) {
+        const bend = (Math.random() - 0.5) * 0.6; // 微弯
+        const angle = targetAngle + bend;
+
+        const dx = -Math.cos(angle) * segLen;
+        const dy = -Math.sin(angle) * segLen;
+        const nx = x + dx;
+        const ny = y + dy;
+
+        segments.push({ x1: x, y1: y, x2: nx, y2: ny });
+
+        if (depth < cfg.maxForkDepth && Math.random() < cfg.forkChance) {
+            const forkAngle = angle + (Math.random() - 0.5) * 1.4; // 分叉角度大
+            segments.push(...generateLightningPath(nx, ny, forkAngle, depth + 1, cfg));
+        }
+
+        x = nx;
+        y = ny;
+
+        const dxToCenter = nx - safeZoneCenter.x;
+        const dyToCenter = ny - safeZoneCenter.y;
+        const distSq = dxToCenter * dxToCenter + dyToCenter * dyToCenter;
+        if (distSq < safeZoneRadius * safeZoneRadius) break;
+    }
+
+    return segments;
+}
+
+function drawRadiantLightning() {
+    const now = Date.now();
+    const cfg = config.zone.visual.radiantLightning;
+    const stages = radiantBolts.useExtraFlash ? cfg.alphaStages : [
+        { t: 0.0, alpha: 1.0 },
+        { t: 1.0, alpha: 0.0 }
+    ];
+
+    radiantBolts.forEach(bolt => {
+        const age = now - bolt.spawnTime;
+        const t = Math.min(1, age / cfg.lifespan);
+
+        // 找出当前时间区间
+        let alpha = 0;
+        for (let i = 0; i < stages.length - 1; i++) {
+            const a = stages[i];
+            const b = stages[i + 1];
+            if (t >= a.t && t <= b.t) {
+                const localT = (t - a.t) / (b.t - a.t);
+                alpha = a.alpha + (b.alpha - a.alpha) * localT;
+                break;
+            }
+        }
+
+        const strokeStyle = cfg.color.replace('ALPHA', alpha.toFixed(3));
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = cfg.lineWidth;
+        ctx.shadowColor = 'rgba(255,255,255,0.5)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        bolt.segments.forEach((seg, idx) => {
+            const ratio = idx / bolt.segments.length;
+            const lw = cfg.lineWidthStart + (cfg.lineWidthEnd - cfg.lineWidthStart) * ratio;
+            ctx.lineWidth = lw;
+            ctx.beginPath();
+            ctx.moveTo(seg.x1, seg.y1);
+            ctx.lineTo(seg.x2, seg.y2);
+            ctx.stroke();
+        });
+        ctx.stroke();
+        ctx.restore();
+    });
+}
+
+function updateLightningBolts() {
+    const cfg = config.zone.visual.outerLightning;
+    const now = Date.now();
+
+    // 清理过期
+    lightningBolts = lightningBolts.filter(bolt => now - bolt.spawnTime < cfg.lifespan);
+
+    // 如果不足数量，补充
+    while (lightningBolts.length < cfg.count) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = safeZoneRadius + 30 + Math.random() * 60;
+
+        const startX = safeZoneCenter.x + Math.cos(angle) * distance;
+        const startY = safeZoneCenter.y + Math.sin(angle) * distance;
+
+        const dx = (Math.random() - 0.5) * 80;
+        const dy = (Math.random() - 0.5) * 80;
+
+        const endX = startX + dx;
+        const endY = startY + dy;
+
+        lightningBolts.push({
+            startX,
+            startY,
+            endX,
+            endY,
+            spawnTime: now
+        });
+    }
+}
+
+function drawOuterLightningBolts() {
+    const cfg = config.zone.visual.outerLightning;
+    const now = Date.now();
+
+    lightningBolts.forEach(bolt => {
+        const progress = (now - bolt.spawnTime) / cfg.lifespan;
+        const alpha = 1 - progress;
+
+        const x1 = bolt.startX;
+        const y1 = bolt.startY;
+        const x2 = bolt.endX;
+        const y2 = bolt.endY;
+
+        const segments = cfg.maxSegments;
+        const offset = cfg.maxOffset;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const x = x1 + (x2 - x1) * t + (Math.random() - 0.5) * offset;
+            const y = y1 + (y2 - y1) * t + (Math.random() - 0.5) * offset;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(x2, y2);
+
+        ctx.strokeStyle = cfg.color.replace(/[\d.]+\)$/, `${alpha.toFixed(2)})`);
+        ctx.lineWidth = cfg.lineWidth;
+        ctx.stroke();
+    });
+}
 
 function updateSafeZone(elapsedMs) {
     const zoneConfig = config.zone;
@@ -799,6 +1010,9 @@ function drawSafeZone() {
     const t = Date.now();
 
     const vis = config.zone.visual;
+    const elapsedMs = t - gameStartTime;
+    const shrinkStart = config.zone.shrinkStartTime;
+    const shrinkEnd = shrinkStart + config.zone.shrinkDuration;
 
     // ① 圈外遮罩
     ctx.save();
@@ -824,10 +1038,17 @@ function drawSafeZone() {
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
 
+    if (vis.lightning.enabled) {
+        drawSafeZoneLightning(cx, cy, r, vis.lightning, t);
+    }
+
     // ④ 圆周粒子
     const ep = vis.edgeParticles;
+    const inShrinkPhase = elapsedMs >= shrinkStart && elapsedMs < shrinkEnd;
+    const rotationSpeed = inShrinkPhase ? ep.rotationSpeedFast : ep.rotationSpeedNormal;
+
     for (let i = 0; i < ep.count; i++) {
-        const angle = (t * ep.rotationSpeed + i * (Math.PI * 2 / ep.count)) % (Math.PI * 2);
+        const angle = (t * rotationSpeed + i * (Math.PI * 2 / ep.count)) % (Math.PI * 2);
         const px = cx + Math.cos(angle) * r;
         const py = cy + Math.sin(angle) * r;
         ctx.beginPath();
@@ -837,9 +1058,6 @@ function drawSafeZone() {
     }
 
     // ⑤ 缩圈冲击波
-    const elapsedMs = t - gameStartTime;
-    const shrinkStart = config.zone.shrinkStartTime;
-    const shrinkEnd = shrinkStart + config.zone.shrinkDuration;
     if (elapsedMs > shrinkStart && elapsedMs < shrinkStart + vis.shockwave.duration) {
         const progress = (elapsedMs - shrinkStart) / vis.shockwave.duration;
         const shockRadius = r + vis.shockwave.maxRadiusBoost * (1 - progress);
@@ -860,6 +1078,37 @@ function drawSafeZone() {
     } else {
         const { text, color } = vis.hudText.closed;
         drawHudText(text, canvas.width / 2, 50, color);
+    }
+
+    if (config.zone.visual.outerLightning.enabled) {
+        drawOuterLightningBolts();
+    }
+
+    if (config.zone.visual.radiantLightning.enabled) {
+        drawRadiantLightning();
+    }
+}
+
+function drawSafeZoneLightning(cx, cy, r, lightningCfg, t) {
+    for (let i = 0; i < lightningCfg.count; i++) {
+        const startAngle = Math.random() * Math.PI * 2;
+        const segmentAngle = (Math.PI * 2) / lightningCfg.segments;
+        ctx.beginPath();
+
+        for (let j = 0; j <= lightningCfg.segments; j++) {
+            const angle = startAngle + j * segmentAngle;
+            const noise = (Math.random() - 0.5) * lightningCfg.wiggle;
+            const rr = r + noise;
+            const x = cx + Math.cos(angle) * rr;
+            const y = cy + Math.sin(angle) * rr;
+
+            if (j === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+
+        ctx.strokeStyle = lightningCfg.color;
+        ctx.lineWidth = lightningCfg.width;
+        ctx.stroke();
     }
 }
 
