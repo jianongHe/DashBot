@@ -46,7 +46,6 @@ const config = {
         }
     },
     charge: {            barWidth: 2,              // 每个竖条的线宽
-
         minPower: 0.2, // Minimum dash power proportion (0 to 1)
         maxPower: 1.0, // Maximum dash power proportion
         minDamage: 20, // Damage dealt at minimum charge
@@ -55,7 +54,7 @@ const config = {
     },
     dash: {
         baseSpeed: 25, // Speed units per frame at max charge power
-        knockbackForce: 50, // Base strength of knockback effect
+        knockbackForce: 100, // Base strength of knockback effect
         minSpeedThreshold: 0.5, // Speed below which a dash ends
     },
     friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
@@ -182,6 +181,9 @@ class Robot {
         this.dashVelY = 0; // Current vertical velocity during dash
         this.dashDamage = 0; // Damage this dash will inflict on hit
         this.hitOverlayAlpha = 0;
+
+        this.lastHitEffectTime = 0; // 上次触发闪烁的时间
+        this.hitEffectCooldown = 100; // 冷却时间（毫秒），可调整
     }
 
     // --- Actions ---
@@ -288,6 +290,14 @@ class Robot {
     }
 
     triggerHitEffect() {
+        const currentTime = Date.now();
+        // 如果冷却时间未到，则不触发新效果
+        if (currentTime - this.lastHitEffectTime < this.hitEffectCooldown) {
+            return;
+        }
+        this.lastHitEffectTime = currentTime;
+
+        // 原有闪烁逻辑
         this.hitOverlayAlpha = 0.6;
         let flashes = config.robot.hitFlashFrames;
         const flashInterval = setInterval(() => {
@@ -295,7 +305,7 @@ class Robot {
             flashes--;
             if (flashes <= 0) {
                 clearInterval(flashInterval);
-                this.color = this.originalColor; // Ensure color is reset
+                this.color = this.originalColor;
             }
         }, config.robot.hitFlashIntervalMs);
     }
