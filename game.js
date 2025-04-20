@@ -18,14 +18,29 @@ const KNOCKBACK_DURATION_FRAMES = 20; // How many frames knockback effect lasts
 const config = {
     robot: {
         radius: 20,
-        maxHp: 100,
+        maxHp: 300,
         pointerLength: 30,
         angleSpeed: 0.03, // Radians per frame (how fast the pointer spins)
         pointerShowsDashDirection: true, // true = pointer shows MOVEMENT direction, false = pointer shows FACING/POOP direction
         hitFlashFrames: 5, // Number of flashes on hit
         hitFlashIntervalMs: 50, // Duration of each flash
+        // 新增：圆环指针配置
+        pointerRing: {
+            numBars: 72,              // 圆环包含的竖条数量 (越多越平滑)
+            baseRadiusOffset: 5,      // 圆环基线距离机器人边缘的距离
+            baseBarHeight: 10,         // 竖条的基础（最小）高度
+            maxPointerHeightBoost: 13,// 指向方向的竖条最大额外高度
+            waveAmplitude: 2,         // 基础波动的振幅（高度变化）
+            waveSpeed: 0.005,         // 波动动画的速度 (rad/ms)
+            waveSpatialFrequency: 2,  // 空间频率，影响同时有多少波峰波谷
+            pointerFocusExponent: 100, // 指针高亮区域的聚焦程度（值越大，高亮区域越窄）
+            barWidth: 2,              // 每个竖条的线宽
+            baseColor: 'rgba(99,136,162,0.4)', // 竖条的基础颜色
+            highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
+        }
     },
-    charge: {
+    charge: {            barWidth: 2,              // 每个竖条的线宽
+
         minPower: 0.2, // Minimum dash power proportion (0 to 1)
         maxPower: 1.0, // Maximum dash power proportion
         minDamage: 20, // Damage dealt at minimum charge
@@ -58,6 +73,42 @@ const config = {
         spawnDistanceRandom: 25, // Max additional random distance
     }
 };
+
+// --- Helper Functions --- (可以放在文件顶部或 Robot 类外部)
+
+/**
+ * 解析 CSS 颜色字符串 (只支持 rgba格式) 为 [r, g, b, a] 数组
+ * @param {string} colorString - e.g., "rgba(255, 100, 50, 0.8)"
+ * @returns {number[] | null} - Array [r, g, b, a] (0-255 for rgb, 0-1 for a) or null if parse fails
+ */
+function parseRGBA(colorString) {
+    const match = colorString.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\)/);
+    if (match) {
+        return [
+            parseInt(match[1], 10),
+            parseInt(match[2], 10),
+            parseInt(match[3], 10),
+            match[4] !== undefined ? parseFloat(match[4]) : 1.0 // Handle rgb() case too
+        ];
+    }
+    return null; // Or return a default color array
+}
+
+/**
+ * 在两个 RGBA 颜色之间进行线性插值
+ * @param {number[]} color1 - 起始颜色 [r, g, b, a]
+ * @param {number[]} color2 - 结束颜色 [r, g, b, a]
+ * @param {number} t - 插值因子 (0.0 to 1.0)
+ * @returns {string} - 插值后的 rgba 字符串
+ */
+function lerpColor(color1, color2, t) {
+    t = Math.max(0, Math.min(1, t)); // Clamp t between 0 and 1
+    const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+    const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+    const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+    const a = color1[3] + (color2[3] - color1[3]) * t;
+    return `rgba(${r}, ${g}, ${b}, ${a.toFixed(3)})`;
+}
 
 // --- Game State ---
 // Variables tracking the current status of the game
@@ -374,33 +425,85 @@ class Robot {
     // --- Drawing ---
 
     draw(ctx) {
-        // Draw Robot Body
+        // Draw Robot Body (保持不变)
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Determine pointer angle based on config
-        // If pointerShowsDashDirection is true, it points OPPOSITE the facing angle (this.angle)
-        // Otherwise, it points WITH the facing angle.
-        let displayAngle = config.robot.pointerShowsDashDirection ? (this.angle + Math.PI) : this.angle;
+        // --- NEW: Draw Pointer Ring ---
+        this.drawPointerRing(ctx); // 调用新的绘制方法
 
-        // Draw Direction Pointer
-        const pointerEndX = this.x + Math.cos(displayAngle) * config.robot.pointerLength;
-        const pointerEndY = this.y + Math.sin(displayAngle) * config.robot.pointerLength;
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(pointerEndX, pointerEndY);
-        ctx.stroke();
-
-        // Draw HP Text above the bot
+        // Draw HP Text above the bot (保持不变)
         ctx.fillStyle = 'white';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
-        // Use Math.max to ensure HP doesn't display below 0 visually
         ctx.fillText(`${Math.max(0, Math.round(this.hp))}`, this.x, this.y - this.radius - 5);
+    }
+
+    // 新增：绘制圆环指针的方法
+    drawPointerRing(ctx) {
+        const ringConfig = config.robot.pointerRing;
+        if (!ringConfig) return; // 如果没有配置则不绘制
+
+        // 1. 确定目标方向角度 (和以前一样)
+        let displayAngle = config.robot.pointerShowsDashDirection ? (this.angle + Math.PI) : this.angle;
+        displayAngle = (displayAngle + Math.PI * 2) % (Math.PI * 2); // 确保角度在 0 到 2PI 之间
+
+        // 2. 获取当前时间用于动画
+        const currentTime = Date.now();
+
+        // 3. 解析基础和高亮颜色 (只在需要时解析一次)
+        // 注意：更优化的做法是在初始化时解析并存储颜色数组
+        const baseColorRGBA = parseRGBA(ringConfig.baseColor) || [100, 100, 120, 0.4];
+        const highlightColorRGBA = parseRGBA(ringConfig.highlightColor) || [255, 255, 255, 1.0];
+
+        // 4. 计算圆环的基础半径
+        const baseRingRadius = this.radius + ringConfig.baseRadiusOffset;
+
+        // 5. 循环绘制每个竖条
+        for (let i = 0; i < ringConfig.numBars; i++) {
+            const barAngle = (i / ringConfig.numBars) * Math.PI * 2;
+
+            // 计算竖条的起始点 (在基础圆环上)
+            const startX = this.x + Math.cos(barAngle) * baseRingRadius;
+            const startY = this.y + Math.sin(barAngle) * baseRingRadius;
+
+            // 计算当前竖条角度与目标显示角度的最小差值 (处理环绕)
+            let angleDiff = Math.abs(barAngle - displayAngle);
+            angleDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff); // 考虑 0 度和 359 度是接近的
+
+            // 计算目标高度因子 (决定竖条因为接近目标方向而增加多少高度)
+            // 使用指数衰减的余弦函数，使得靠近目标方向时因子接近 1，远离时快速衰减到 0
+            // pointerFocusExponent 控制聚焦程度，值越大，高亮区域越窄
+            const targetHeightFactor = Math.pow(Math.cos(Math.min(angleDiff, Math.PI / 2)), ringConfig.pointerFocusExponent);
+
+
+            // 计算波动高度偏移
+            const waveOffset = Math.sin(currentTime * ringConfig.waveSpeed + barAngle * ringConfig.waveSpatialFrequency)
+                * ringConfig.waveAmplitude;
+
+            // 计算最终的竖条高度
+            const barHeight = ringConfig.baseBarHeight                  // 基础高度
+                + targetHeightFactor * ringConfig.maxPointerHeightBoost // 指针方向的额外高度
+                + waveOffset;                                // 波动高度
+            const finalBarHeight = Math.max(0, barHeight); // 确保高度不为负
+
+            // 计算竖条的结束点
+            const endX = this.x + Math.cos(barAngle) * (baseRingRadius + finalBarHeight);
+            const endY = this.y + Math.sin(barAngle) * (baseRingRadius + finalBarHeight);
+
+            // 计算竖条颜色 (根据 targetHeightFactor 在基础色和高亮色之间插值)
+            const barColor = lerpColor(baseColorRGBA, highlightColorRGBA, targetHeightFactor);
+
+            // 绘制竖条
+            ctx.strokeStyle = barColor;
+            ctx.lineWidth = ringConfig.barWidth;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
     }
 }
 
