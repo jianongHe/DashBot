@@ -712,6 +712,13 @@ function setupReadyButtons() {
     });
 }
 
+function hideGameOverScreen() {
+    // 使用我们之前定义的 ui 引用来获取元素
+    if (ui.gameOver) {
+        ui.gameOver.style.display = 'none';
+    }
+}
+
 // --- Game Management ---
 
 function initGame() {
