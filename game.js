@@ -30,7 +30,7 @@ const config = {
         maxPower: 1.0, // Maximum dash power proportion
         minDamage: 20, // Damage dealt at minimum charge
         maxDamage: 60, // Damage dealt at maximum charge
-        maxChargeTime: 1500, // milliseconds to reach max charge
+        maxChargeTime: 1000, // milliseconds to reach max charge
     },
     dash: {
         baseSpeed: 25, // Speed units per frame at max charge power
