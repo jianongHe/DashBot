@@ -58,8 +58,8 @@ canvas {
     transition: width 0.1s linear; /* Smooth transition */
 }
 
-
-#game-over {
+.game-over-screen {
+    display: none;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -72,12 +72,12 @@ canvas {
     color: white;
 }
 
-#game-over h2 {
+.game-over-screen h2 {
     margin-top: 0;
     color: #f0a500;
 }
 
-#game-over button {
+.game-over-screen button {
     padding: 10px 20px;
     font-size: 1em;
     cursor: pointer;
@@ -106,15 +106,49 @@ canvas {
     opacity: 0.8;
 }
 
-#p1-ready-status, #p2-ready-status {
+.timer-box {
+    color: white;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    padding: 10px;
+}
+
+.timer-box.shrink {
+    color: #f88;
+    font-size: 1em;
+}
+
+.ready-container {
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.ready-button {
+    width: 120px;
+}
+
+.ready-status {
     width: 100px;
+    margin-right: 20px;
+}
+
+#p1-ready-status, #p2-ready-status {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
 }
 
 #p1-ready-btn, #p2-ready-btn {
     width: 120px;
 }
 
-#ready-container, #timer, #shrink-timer {
+#ready-container {
     background: rgba(0, 0, 0, 0.4);
     padding: 8px 0;
     border-radius: 12px;
@@ -122,6 +156,7 @@ canvas {
     font-weight: bold;
     backdrop-filter: blur(4px);
 }
+
 body {
     font-family: 'JetBrains Mono', monospace;
     color: white;
@@ -130,6 +165,7 @@ body {
 h1, .game-title {
     text-shadow: 0 0 4px #ffcc00;
 }
+
 button {
     background-color: rgba(255, 255, 255, 0.08);
     color: white;
@@ -143,6 +179,7 @@ button {
 button:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
+
 #star-background {
     pointer-events: none;
     z-index: -1;
