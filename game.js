@@ -49,6 +49,12 @@ const p2ChargeElement = document.getElementById('p2-charge');
 const gameOverElement = document.getElementById('game-over');
 const winnerMessageElement = document.getElementById('winner-message');
 const shrinkTimerElement = document.getElementById('shrink-timer');
+const p1ReadyBtn = document.getElementById('p1-ready-btn');
+const p2ReadyBtn = document.getElementById('p2-ready-btn');
+const p1ReadyStatus = document.getElementById('p1-ready-status');
+const p2ReadyStatus = document.getElementById('p2-ready-status');
+let p1Ready = false;
+let p2Ready = false;
 
 // --- Robot Class ---
 class Robot {
@@ -493,6 +499,13 @@ function setupInputListeners() {
     });
 }
 
+function checkBothReady() {
+    if (p1Ready && p2Ready) {
+        document.getElementById('ready-container').style.display = 'none';
+        initGame();
+    }
+}
+
 // --- Game Management ---
 function initGame() {
     console.log("Initializing game...");
@@ -546,16 +559,44 @@ function endGame(winningPlayer) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
     }
+    // Reset ready state for both players
+    p1Ready = false;
+    p2Ready = false;
+    p1ReadyBtn.disabled = false;
+    p2ReadyBtn.disabled = false;
+    p1ReadyStatus.textContent = 'Not Ready';
+    p2ReadyStatus.textContent = 'Not Ready';
+    document.getElementById('ready-container').style.display = 'block';
+}
+
+function prepareForRematch() {
+    console.log("Preparing rematch, waiting for both players to Ready...");
+    gameOverElement.style.display = 'none';
+    particles = [];
+    p1Ready = false;
+    p2Ready = false;
+    p1ReadyBtn.disabled = false;
+    p2ReadyBtn.disabled = false;
+    p1ReadyStatus.textContent = 'Not Ready';
+    p2ReadyStatus.textContent = 'Not Ready';
+    document.getElementById('ready-container').style.display = 'block';
 }
 
 function resetGame() {
     console.log("Resetting game...");
     particles = [];
-    initGame(); // Re-initialize the game state
+    // 重新等待玩家准备
+    p1Ready = false;
+    p2Ready = false;
+    p1ReadyBtn.disabled = false;
+    p2ReadyBtn.disabled = false;
+    p1ReadyStatus.textContent = 'Not Ready';
+    p2ReadyStatus.textContent = 'Not Ready';
+    document.getElementById('ready-container').style.display = 'block';
 }
 
 // --- Start the Game ---
-initGame(); // Initial game start when the script loads
+// initGame(); // Initial game start when the script loads
 
 function generateStars(count, width, height) {
     const container = document.getElementById('star-background');
@@ -581,6 +622,20 @@ function setupStarfield() {
 }
 
 setupStarfield();
+
+p1ReadyBtn.addEventListener('click', () => {
+    p1Ready = !p1Ready;
+    p1ReadyBtn.textContent = p1Ready ? 'Cancel Ready' : 'Player 1 Ready';
+    p1ReadyStatus.textContent = p1Ready ? 'Ready!' : 'Not Ready';
+    checkBothReady();
+});
+
+p2ReadyBtn.addEventListener('click', () => {
+    p2Ready = !p2Ready;
+    p2ReadyBtn.textContent = p2Ready ? 'Cancel Ready' : 'Player 2 Ready';
+    p2ReadyStatus.textContent = p2Ready ? 'Ready!' : 'Not Ready';
+    checkBothReady();
+});
 
 function drawSafeZoneCircle() {
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';

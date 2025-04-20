@@ -11,6 +11,10 @@
 <h1>PoopBot - Local Basic Battle</h1>
 <div id="timer" style="color: white; font-size: 1.2em; margin-bottom: 10px;">Time Left: </div>
 <div id="shrink-timer" style="color: #f88; font-size: 1em; margin-bottom: 10px;">Shrink In: </div>
+<div id="ready-container" style="color: white; text-align: center; margin-bottom: 20px;">
+    <p><button id="p1-ready-btn">Player 1 Ready</button> <span id="p1-ready-status">Not Ready</span></p>
+    <p><button id="p2-ready-btn">Player 2 Ready</button> <span id="p2-ready-status">Not Ready</span></p>
+</div>
 <div id="game-container">
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="ui">
@@ -26,7 +30,7 @@
     <div id="game-over" style="display: none;">
         <h2>Game Over!</h2>
         <p id="winner-message"></p>
-        <button onclick="resetGame()">Restart</button>
+        <button onclick="prepareForRematch()">Ok</button>
     </div>
 </div>
 <script src="game.js"></script>
