@@ -4,6 +4,12 @@
  * while a safe zone shrinks.
  */
 
+// Load UFO image resources
+const redUfoImage = new Image();
+redUfoImage.src = 'assets/red_ufo.png';
+const blueUfoImage = new Image();
+blueUfoImage.src = 'assets/blue_ufo.png';
+
 // --- Canvas & Rendering Context ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -32,7 +38,7 @@ const config = {
             maxPointerHeightBoost: 13,// 指向方向的竖条最大额外高度
             waveAmplitude: 2,         // 基础波动的振幅（高度变化）
             waveSpeed: 0.005,         // 波动动画的速度 (rad/ms)
-            waveSpatialFrequency: 2,  // 空间频率，影响同时有多少波峰波谷
+            waveSpatialFrequency: 6,  // 空间频率，影响同时有多少波峰波谷
             pointerFocusExponent: 100, // 指针高亮区域的聚焦程度（值越大，高亮区域越窄）
             barWidth: 2,              // 每个竖条的线宽
             baseColor: 'rgba(99,136,162,0.4)', // 竖条的基础颜色
@@ -159,6 +165,7 @@ class Robot {
         this.originalColor = color; // For hit flash effect
         this.angle = Math.random() * Math.PI * 2; // Represents FACING direction (where poop comes out)
         this.controlKey = controlKey; // Assigned keyboard key for P2 (e.g., 'l')
+        this.imageAngle = 0; // 飞碟图片的旋转角度
 
         // State flags
         this.isCharging = false;
@@ -174,6 +181,7 @@ class Robot {
         this.dashVelX = 0; // Current horizontal velocity during dash
         this.dashVelY = 0; // Current vertical velocity during dash
         this.dashDamage = 0; // Damage this dash will inflict on hit
+        this.hitOverlayAlpha = 0;
     }
 
     // --- Actions ---
@@ -280,6 +288,7 @@ class Robot {
     }
 
     triggerHitEffect() {
+        this.hitOverlayAlpha = 0.6;
         let flashes = config.robot.hitFlashFrames;
         const flashInterval = setInterval(() => {
             this.color = this.color === 'white' ? this.originalColor : 'white';
@@ -298,6 +307,7 @@ class Robot {
         if (!this.isDashing) {
             // Note: Angle always rotates, regardless of charging status
             this.angle = (this.angle + config.robot.angleSpeed) % (Math.PI * 2);
+            this.imageAngle = (this.imageAngle + config.robot.angleSpeed * 0.4) % (Math.PI * 2); // 比指针慢
         }
 
         // Update charge power visual if charging
@@ -425,14 +435,35 @@ class Robot {
     // --- Drawing ---
 
     draw(ctx) {
-        // Draw Robot Body (保持不变)
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw Robot Body using UFO image
+        const ufoImage = this.id === 1 ? redUfoImage : blueUfoImage;
+        const size = this.radius * 2;
+        if (ufoImage.complete) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.imageAngle);
+            ctx.drawImage(ufoImage, -this.radius, -this.radius, size, size);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // --- NEW: Draw Pointer Ring ---
-        this.drawPointerRing(ctx); // 调用新的绘制方法
+        if (this.hitOverlayAlpha > 0.01) {
+            ctx.save();
+            ctx.globalAlpha = this.hitOverlayAlpha;
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            this.hitOverlayAlpha *= 0.8; // 每帧衰减
+        }
+
+        // Draw Pointer Ring
+        this.drawPointerRing(ctx);
 
         // Draw HP Text above the bot (保持不变)
         ctx.fillStyle = 'white';
