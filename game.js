@@ -1,212 +1,377 @@
+/**
+ * @fileoverview Main script for a 2-player physics-based arena game.
+ * Players control robots, charge up dashes, and knock each other out
+ * while a safe zone shrinks.
+ */
+
+// --- Canvas & Rendering Context ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// --- Constants ---
+const MS_PER_SECOND = 1000;
+const FRAMES_PER_SECOND = 60; // Assumed frame rate for dt calculations
+const KNOCKBACK_DURATION_FRAMES = 20; // How many frames knockback effect lasts
+
 // --- Game Configuration ---
+// Centralized settings for game balance and mechanics
 const config = {
     robot: {
         radius: 20,
         maxHp: 100,
         pointerLength: 30,
-        angleSpeed: 0.03, // Radians per frame
-        pointerShowsDashDirection: true // true = pointer shows movement direction, false = pointer shows facing/poop direction
+        angleSpeed: 0.03, // Radians per frame (how fast the pointer spins)
+        pointerShowsDashDirection: true, // true = pointer shows MOVEMENT direction, false = pointer shows FACING/POOP direction
+        hitFlashFrames: 5, // Number of flashes on hit
+        hitFlashIntervalMs: 50, // Duration of each flash
     },
     charge: {
-        minPower: 0.2, // Min proportion of max dash speed/dist
-        maxPower: 1.0,
-        minDamage: 20,
-        maxDamage: 60,
-        maxChargeTime: 1500, // milliseconds
+        minPower: 0.2, // Minimum dash power proportion (0 to 1)
+        maxPower: 1.0, // Maximum dash power proportion
+        minDamage: 20, // Damage dealt at minimum charge
+        maxDamage: 60, // Damage dealt at maximum charge
+        maxChargeTime: 1500, // milliseconds to reach max charge
     },
     dash: {
-        baseSpeed: 25, // Base speed units per frame at max charge
-        knockbackForce: 50, // Increased knockback force for enhanced hit back strength
+        baseSpeed: 25, // Speed units per frame at max charge power
+        knockbackForce: 50, // Base strength of knockback effect
+        minSpeedThreshold: 0.5, // Speed below which a dash ends
     },
-    friction: 0.90, // Slows down dashing bots slightly
+    friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
     zone: {
-        totalGameTime: 100000, // ms, total game time (e.g. 10 sec for testing)
-        shrinkStartTime: 30000, // ms, time when shrinking starts (e.g. 3 sec for testing)
-        shrinkDuration: 5000, // ms, total shrink time
-        minRadius: 100, // min radius of safe zone
-        damagePerSecondOutside: 10 // HP loss per second outside
+        totalGameTime: 100000, // ms, total duration of a match
+        shrinkStartTime: 30000, // ms, when the safe zone starts shrinking
+        shrinkDuration: 5000, // ms, how long the shrinking process takes
+        minRadius: 100, // Smallest radius the safe zone will reach
+        damagePerTickOutside: (10 / FRAMES_PER_SECOND) // <--- CORRECTED CALCULATION
+    },
+    particle: {
+        maxCount: 300, // Max number of poop particles
+        baseLife: 25, // Base frames a particle lives
+        randomLifeBoost: 20, // Max additional random frames
+        baseSize: 15, // Base particle size
+        randomSizeBoost: 15, // Max additional random size
+        distanceSizeFactor: 0.2, // How much spawn distance affects size
+        velocityFactor: 0.1, // How much robot speed affects particle speed
+        spreadAngle: 1.5, // Max random angle offset (radians) for spray effect
+        spawnDistanceBase: 10, // Min distance from robot center particles spawn
+        spawnDistanceRandom: 25, // Max additional random distance
     }
 };
 
 // --- Game State ---
-let players = [];
+// Variables tracking the current status of the game
+let players = []; // Array holding the two Robot objects
+let particles = []; // Array for visual effects (poop)
 let gameOver = false;
-let winner = null;
-let animationFrameId;
-let safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2; // 初始为对角线的一半，确保覆盖全画布
-let safeZoneCenter = { x: canvas.width / 2, y: canvas.height / 2 };
-let gameStartTime;
-let particles = [];
+let winner = null; // Stores the winning Robot object or null for draw/ongoing
+let animationFrameId = null; // ID for cancelling the game loop animation frame
+let safeZoneRadius; // Current radius of the safe zone
+let safeZoneCenter; // Center coordinates {x, y} of the safe zone
+let gameStartTime; // Timestamp when the current game started
+let p1Ready = false; // Player 1 ready status
+let p2Ready = false; // Player 2 ready status
 
-// --- UI Elements ---
-const p1HpElement = document.getElementById('p1-hp');
-const p2HpElement = document.getElementById('p2-hp');
-const p1ChargeElement = document.getElementById('p1-charge');
-const p2ChargeElement = document.getElementById('p2-charge');
-const gameOverElement = document.getElementById('game-over');
-const winnerMessageElement = document.getElementById('winner-message');
-const shrinkTimerElement = document.getElementById('shrink-timer');
-const p1ReadyBtn = document.getElementById('p1-ready-btn');
-const p2ReadyBtn = document.getElementById('p2-ready-btn');
-const p1ReadyStatus = document.getElementById('p1-ready-status');
-const p2ReadyStatus = document.getElementById('p2-ready-status');
-let p1Ready = false;
-let p2Ready = false;
+// --- UI Element References ---
+// Getting references to HTML elements for UI updates
+const ui = {
+    p1: {
+        hp: document.getElementById('p1-hp'),
+        charge: document.getElementById('p1-charge'),
+        readyBtn: document.getElementById('p1-ready-btn'),
+        readyStatus: document.getElementById('p1-ready-status'),
+    },
+    p2: {
+        hp: document.getElementById('p2-hp'),
+        charge: document.getElementById('p2-charge'),
+        readyBtn: document.getElementById('p2-ready-btn'),
+        readyStatus: document.getElementById('p2-ready-status'),
+    },
+    gameOver: document.getElementById('game-over'),
+    winnerMessage: document.getElementById('winner-message'),
+    shrinkTimer: document.getElementById('shrink-timer'),
+    timer: document.getElementById('timer'),
+    readyContainer: document.getElementById('ready-container'),
+    starBackground: document.getElementById('star-background')
+};
 
 // --- Robot Class ---
 class Robot {
     constructor(x, y, color, id, controlKey = null) {
-        this.id = id;
+        // Core properties
+        this.id = id; // Player ID (1 or 2)
         this.x = x;
         this.y = y;
         this.hp = config.robot.maxHp;
         this.radius = config.robot.radius;
         this.color = color;
-        this.originalColor = color;
-        // this.angle now consistently represents the robot's FACING direction (where poop comes out)
-        this.angle = Math.random() * Math.PI * 2;
-        this.angleSpeed = config.robot.angleSpeed;
+        this.originalColor = color; // For hit flash effect
+        this.angle = Math.random() * Math.PI * 2; // Represents FACING direction (where poop comes out)
+        this.controlKey = controlKey; // Assigned keyboard key for P2 (e.g., 'l')
 
+        // State flags
         this.isCharging = false;
-        this.chargeStartTime = 0;
-        this.chargePower = 0; // 0 to 1
-
         this.isDashing = false;
-        this.dashVelX = 0;
-        this.dashVelY = 0;
-        this.dashDamage = 0;
+        this.isControlDown = false; // Tracks if the control key/mouse is currently pressed
+        this.isInSafeZone = true; // Tracks if the robot was inside the zone last frame
 
-        this.controlKey = controlKey; // For keyboard control
-        this.isControlDown = false; // Tracks if the control key/mouse is pressed
-        this.isInSafeZone = true;
+        // Charge mechanics
+        this.chargeStartTime = 0;
+        this.chargePower = 0; // Calculated proportion (0 to 1) based on charge time
+
+        // Dash mechanics
+        this.dashVelX = 0; // Current horizontal velocity during dash
+        this.dashVelY = 0; // Current vertical velocity during dash
+        this.dashDamage = 0; // Damage this dash will inflict on hit
     }
+
+    // --- Actions ---
 
     startCharge() {
         // Can only start charging if not already charging AND not currently dashing
         if (!this.isCharging && !this.isDashing) {
             this.isCharging = true;
             this.chargeStartTime = Date.now();
-            this.chargePower = 0;
+            this.chargePower = 0; // Reset power at start
             console.log(`Player ${this.id} started charging.`);
         }
     }
 
     releaseCharge() {
         if (this.isCharging) {
+            this.isCharging = false; // Stop charging immediately
+
+            // Calculate charge duration and ratio (capped by max charge time)
             const chargeDuration = Math.min(Date.now() - this.chargeStartTime, config.charge.maxChargeTime);
             const chargeRatio = chargeDuration / config.charge.maxChargeTime; // 0 to 1
 
+            // Calculate dash power (non-linear scaling using sqrt)
             this.chargePower = config.charge.minPower + (config.charge.maxPower - config.charge.minPower) * Math.sqrt(chargeRatio);
+
+            // Calculate dash speed and damage based on power/ratio
             const dashSpeed = config.dash.baseSpeed * this.chargePower;
-
-            // Dash direction is ALWAYS opposite the facing angle (this.angle)
-            const dashAngle = this.angle + Math.PI;
-
-            this.dashVelX = Math.cos(dashAngle) * dashSpeed;
-            this.dashVelY = Math.sin(dashAngle) * dashSpeed;
             this.dashDamage = config.charge.minDamage + (config.charge.maxDamage - config.charge.minDamage) * chargeRatio;
 
-            this.isCharging = false; // Stop charging
-            this.isDashing = true;  // Start dashing
-            // Log clarifies based on config
+            // Dash direction is ALWAYS opposite the facing angle (visual pointer might differ based on config)
+            const dashAngle = this.angle + Math.PI;
+            this.dashVelX = Math.cos(dashAngle) * dashSpeed;
+            this.dashVelY = Math.sin(dashAngle) * dashSpeed;
+
+            this.isDashing = true; // Start dashing
+
+            // Log details
             const pointerMeaning = config.robot.pointerShowsDashDirection ? "dash direction" : "facing direction";
             console.log(`Player ${this.id} released charge. Power: ${this.chargePower.toFixed(2)}, Damage: ${this.dashDamage.toFixed(0)}. Dash Angle: ${dashAngle.toFixed(2)}. Current Pointer shows: ${pointerMeaning}`);
 
-            this.updateChargeIndicator(0); // Reset charge indicator bar
+            this.updateChargeIndicator(0); // Reset charge indicator bar visually
         }
     }
 
-    update(deltaTime) {
-        // Rotate facing angle if not dashing
-        if (!this.isDashing) {
-            this.angle = (this.angle + this.angleSpeed) % (Math.PI * 2);
+    takeDamage(damage, knockbackSourceX = this.x, knockbackSourceY = this.y, knockbackForceMultiplier = 1) {
+        // Prevent taking damage if already dead
+        if (this.hp <= 0) return;
+
+        this.hp -= damage;
+        console.log(`Player ${this.id} took ${damage.toFixed(0)} damage. HP left: ${this.hp.toFixed(0)}`);
+
+        // Apply Knockback only if NOT currently dashing (prevents weird self-interaction in head-ons)
+        // and if damage was actually dealt (relevant for zone damage with 0 knockback)
+        if (!this.isDashing && damage > 0 && knockbackForceMultiplier > 0) {
+            // Calculate direction away from the source of damage
+            const dx = this.x - knockbackSourceX;
+            const dy = this.y - knockbackSourceY;
+            const dist = Math.sqrt(dx*dx + dy*dy) || 1; // Avoid division by zero
+            const knockbackDirX = dx / dist;
+            const knockbackDirY = dy / dist;
+
+            // Scale knockback distance by damage dealt relative to max possible charge damage
+            const knockbackBaseDistance = config.dash.knockbackForce * knockbackForceMultiplier;
+            const damageScale = Math.max(0.1, damage / config.charge.maxDamage); // Ensure some minimum knockback
+            const knockbackDist = knockbackBaseDistance * damageScale;
+
+            this.applyKnockback(knockbackDirX, knockbackDirY, knockbackDist);
         }
 
-        // Update charge visual
+        this.triggerHitEffect(); // Visual feedback
+
+        // Check for death
+        if (this.hp <= 0) {
+            this.hp = 0;
+            // Determine winner based on who is left
+            const otherPlayer = players.find(p => p !== this);
+            endGame(otherPlayer); // The other player wins
+        }
+    }
+
+    applyKnockback(dirX, dirY, distance) {
+        let frame = 0;
+        // Calculate initial speed for a simple ease-out effect
+        const initialSpeed = distance / KNOCKBACK_DURATION_FRAMES * 2;
+
+        const knockbackInterval = setInterval(() => {
+            // Calculate speed decrease over the duration
+            const progress = frame / KNOCKBACK_DURATION_FRAMES;
+            const speed = initialSpeed * (1 - progress); // Speed decreases linearly
+
+            // Apply movement
+            this.x += dirX * speed;
+            this.y += dirY * speed;
+
+            // Clamp position to canvas bounds
+            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+
+            frame++;
+            if (frame >= KNOCKBACK_DURATION_FRAMES) {
+                clearInterval(knockbackInterval);
+            }
+        }, MS_PER_SECOND / FRAMES_PER_SECOND); // Run at ~60fps
+    }
+
+    triggerHitEffect() {
+        let flashes = config.robot.hitFlashFrames;
+        const flashInterval = setInterval(() => {
+            this.color = this.color === 'white' ? this.originalColor : 'white';
+            flashes--;
+            if (flashes <= 0) {
+                clearInterval(flashInterval);
+                this.color = this.originalColor; // Ensure color is reset
+            }
+        }, config.robot.hitFlashIntervalMs);
+    }
+
+    // --- Updates ---
+
+    update() {
+        // Rotate facing angle (pointer) if not dashing
+        if (!this.isDashing) {
+            // Note: Angle always rotates, regardless of charging status
+            this.angle = (this.angle + config.robot.angleSpeed) % (Math.PI * 2);
+        }
+
+        // Update charge power visual if charging
         if (this.isCharging) {
             const chargeDuration = Math.min(Date.now() - this.chargeStartTime, config.charge.maxChargeTime);
             const chargeRatio = chargeDuration / config.charge.maxChargeTime;
-            this.updateChargeIndicator(chargeRatio * 100);
+            this.updateChargeIndicator(chargeRatio * 100); // UI expects percentage
         }
 
-        // Update position if dashing
+        // Update position and handle physics if dashing
         if (this.isDashing) {
-            this.x += this.dashVelX;
-            this.y += this.dashVelY;
-            const currentSpeed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
-            const particleCount = Math.floor(currentSpeed / 5); // 每5单位速度生成1个屎粒子
-
-            for (let i = 0; i < particleCount; i++) {
-                const spreadAngle = (Math.random() - 0.5) * 1.5;
-                const dashAngle = Math.atan2(this.dashVelY, this.dashVelX);
-                const angle = dashAngle + Math.PI + spreadAngle; // 沿 dash 方向反向喷射
-                const distance = Math.random() * 25 + 10;
-                particles.push({
-                    x: this.x + Math.cos(angle) * distance,
-                    y: this.y + Math.sin(angle) * distance,
-                    size: Math.random() * 15 + 15 + distance * 0.2,
-                    rotation: Math.random() * Math.PI * 2,
-                    vx: Math.cos(angle) * currentSpeed * 0.1,
-                    vy: Math.sin(angle) * currentSpeed * 0.1,
-                    life: Math.floor(Math.random() * 20 + 25)
-                });
-                if (particles.length > 300) {
-                    particles.splice(0, particles.length - 300);
-                }
-            }
-            // === boundary reflection (billiard‑style) ===
-            if (this.x < this.radius) {
-                this.x = this.radius;
-                this.dashVelX = Math.abs(this.dashVelX);
-            }
-            if (this.x > canvas.width - this.radius) {
-                this.x = canvas.width - this.radius;
-                this.dashVelX = -Math.abs(this.dashVelX);
-            }
-            if (this.y < this.radius) {
-                this.y = this.radius;
-                this.dashVelY = Math.abs(this.dashVelY);
-            }
-            if (this.y > canvas.height - this.radius) {
-                this.y = canvas.height - this.radius;
-                this.dashVelY = -Math.abs(this.dashVelY);
-            }
-            // === end reflection ===
-
-            // Apply friction
-            this.dashVelX *= config.friction;
-            this.dashVelY *= config.friction;
-
-            // Check if dash should end (low speed or out of bounds)
-            const speed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
-            if (speed < 0.5) {
-                this.isDashing = false; // Stop dashing
-                this.dashVelX = 0;
-                this.dashVelY = 0;
-                console.log(`Player ${this.id} dash ended.`);
-
-                // --- NEW: Charge Buffering ---
-                // If the control is still held down when the dash ends, immediately start charging again.
-                if (this.isControlDown) {
-                    console.log(`Player ${this.id} buffering charge input.`);
-                    this.startCharge();
-                }
-                // --- End of Charge Buffering ---
-            }
-
+            this.updateDashMovement();
         }
     }
 
+    updateDashMovement() {
+        this.x += this.dashVelX;
+        this.y += this.dashVelY;
+
+        this._handleBoundaryReflection();
+        this._applyDashFriction();
+        this._createDashParticles();
+
+        // Check if dash should end (speed is too low)
+        const speed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
+        if (speed < config.dash.minSpeedThreshold) {
+            this._endDash();
+        }
+    }
+
+    _handleBoundaryReflection() {
+        // Reflects off canvas boundaries like a billiard ball
+        if (this.x < this.radius) {
+            this.x = this.radius;
+            this.dashVelX = Math.abs(this.dashVelX); // Reflect horizontally
+        } else if (this.x > canvas.width - this.radius) {
+            this.x = canvas.width - this.radius;
+            this.dashVelX = -Math.abs(this.dashVelX); // Reflect horizontally
+        }
+
+        if (this.y < this.radius) {
+            this.y = this.radius;
+            this.dashVelY = Math.abs(this.dashVelY); // Reflect vertically
+        } else if (this.y > canvas.height - this.radius) {
+            this.y = canvas.height - this.radius;
+            this.dashVelY = -Math.abs(this.dashVelY); // Reflect vertically
+        }
+    }
+
+    _applyDashFriction() {
+        this.dashVelX *= config.friction;
+        this.dashVelY *= config.friction;
+    }
+
+    _createDashParticles() {
+        const currentSpeed = Math.sqrt(this.dashVelX ** 2 + this.dashVelY ** 2);
+        // More particles generated at higher speeds
+        const particleCount = Math.floor(currentSpeed / 5); // Arbitrary scaling factor
+
+        for (let i = 0; i < particleCount; i++) {
+            // Calculate base direction opposite to dash direction
+            const dashAngle = Math.atan2(this.dashVelY, this.dashVelX);
+            const baseParticleAngle = dashAngle + Math.PI;
+            // Add random spread
+            const spread = (Math.random() - 0.5) * config.particle.spreadAngle;
+            const finalAngle = baseParticleAngle + spread;
+
+            // Spawn particles slightly behind the robot
+            const spawnDist = config.particle.spawnDistanceBase + Math.random() * config.particle.spawnDistanceRandom;
+            const spawnX = this.x + Math.cos(finalAngle) * spawnDist;
+            const spawnY = this.y + Math.sin(finalAngle) * spawnDist;
+
+            particles.push({
+                x: spawnX,
+                y: spawnY,
+                size: config.particle.baseSize + Math.random() * config.particle.randomSizeBoost + spawnDist * config.particle.distanceSizeFactor,
+                rotation: Math.random() * Math.PI * 2,
+                // Particle velocity is a fraction of the robot's speed in the particle's direction
+                vx: Math.cos(finalAngle) * currentSpeed * config.particle.velocityFactor,
+                vy: Math.sin(finalAngle) * currentSpeed * config.particle.velocityFactor,
+                life: Math.floor(config.particle.baseLife + Math.random() * config.particle.randomLifeBoost) // Frames to live
+            });
+        }
+        // Limit total particles to prevent performance issues
+        if (particles.length > config.particle.maxCount) {
+            particles.splice(0, particles.length - config.particle.maxCount);
+        }
+    }
+
+
+    _endDash() {
+        console.log(`Player ${this.id} dash ended.`);
+        this.isDashing = false;
+        this.dashVelX = 0;
+        this.dashVelY = 0;
+        this.dashDamage = 0; // Reset damage potential
+
+        // --- Charge Buffering ---
+        // If the control key/mouse is still held down when the dash ends,
+        // immediately start charging again. Allows for smoother chaining.
+        if (this.isControlDown) {
+            console.log(`Player ${this.id} buffering charge input.`);
+            this.startCharge();
+        }
+        // --- End of Charge Buffering ---
+    }
+
+    // --- UI Updates ---
+
     updateChargeIndicator(percentage) {
-        const chargeBar = this.id === 1 ? p1ChargeElement : p2ChargeElement;
+        const chargeBar = (this.id === 1) ? ui.p1.charge : ui.p2.charge;
         if (chargeBar) {
             chargeBar.style.width = `${percentage}%`;
         }
     }
 
+    updateHpIndicator() {
+        const hpElement = (this.id === 1) ? ui.p1.hp : ui.p2.hp;
+        if (hpElement) {
+            hpElement.textContent = Math.max(0, Math.round(this.hp));
+        }
+    }
+
+
+    // --- Drawing ---
 
     draw(ctx) {
         // Draw Robot Body
@@ -216,7 +381,9 @@ class Robot {
         ctx.fill();
 
         // Determine pointer angle based on config
-        let displayAngle = config.robot.pointerShowsDashDirection ? this.angle + Math.PI : this.angle;
+        // If pointerShowsDashDirection is true, it points OPPOSITE the facing angle (this.angle)
+        // Otherwise, it points WITH the facing angle.
+        let displayAngle = config.robot.pointerShowsDashDirection ? (this.angle + Math.PI) : this.angle;
 
         // Draw Direction Pointer
         const pointerEndX = this.x + Math.cos(displayAngle) * config.robot.pointerLength;
@@ -228,419 +395,454 @@ class Robot {
         ctx.lineTo(pointerEndX, pointerEndY);
         ctx.stroke();
 
-        // Draw HP above the bot
+        // Draw HP Text above the bot
         ctx.fillStyle = 'white';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
+        // Use Math.max to ensure HP doesn't display below 0 visually
         ctx.fillText(`${Math.max(0, Math.round(this.hp))}`, this.x, this.y - this.radius - 5);
     }
-
-    takeDamage(damage, knockbackDirX, knockbackDirY) {
-        // Optional: Reduce damage or prevent knockback if already dashing?
-        // if (this.isDashing) return; // Basic invulnerability while dashing
-
-        this.hp -= damage;
-        console.log(`Player ${this.id} took ${damage.toFixed(0)} damage. HP left: ${this.hp.toFixed(0)}`);
-
-        // Apply Knockback only if not dashing (prevents self-knockback during head-on collision resolution)
-        if (!this.isDashing) {
-            const knockbackDist = config.dash.knockbackForce * 2 * (damage / config.charge.maxDamage);
-            this.applyKnockback(knockbackDirX, knockbackDirY, knockbackDist);
-        }
-
-        if (this.hp <= 0) {
-            this.hp = 0;
-            endGame(players.find(p => p !== this)); // The other player wins
-        }
-        this.triggerHitEffect();
-    }
-
-    applyKnockback(dirX, dirY, distance) {
-        const totalFrames = 20;
-        let frame = 0;
-        const initialSpeed = distance / totalFrames * 2;
-
-        const knockbackInterval = setInterval(() => {
-            const progress = frame / totalFrames;
-            const speed = initialSpeed * (1 - progress);
-
-            this.x += dirX * speed;
-            this.y += dirY * speed;
-
-            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-
-            frame++;
-            if (frame >= totalFrames) clearInterval(knockbackInterval);
-        }, 16);
-    }
-
-    triggerHitEffect() {
-        const originalColor = this.originalColor;
-        let flashes = 5;
-        const flashInterval = setInterval(() => {
-            this.color = this.color === 'white' ? originalColor : 'white';
-            flashes--;
-            if (flashes === 0) {
-                clearInterval(flashInterval);
-                this.color = originalColor;
-            }
-        }, 50);
-    }
 }
 
-// --- Collision Detection ---
+// --- Collision Detection & Handling ---
+
 function checkCollisions() {
+    // Simplified since we assume only 2 players
+    if (players.length < 2) return;
     const [p1, p2] = players;
 
-    // Attacker deals damage
-    if (p1.isDashing && !p2.isDashing) {
-        handleCollision(p1, p2);
-    } else if (p2.isDashing && !p1.isDashing) {
-        handleCollision(p2, p1);
-    }
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const distanceSquared = dx * dx + dy * dy; // Use squared distance for efficiency
+    const minDistance = p1.radius + p2.radius;
+    const minDistanceSquared = minDistance * minDistance;
 
-    // Head-on collision
-    else if (p1.isDashing && p2.isDashing) {
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const minDistance = p1.radius + p2.radius;
-
-        if (distance < minDistance) {
+    // Proceed only if they are actually overlapping
+    if (distanceSquared < minDistanceSquared) {
+        // Scenario 1: P1 dashes into stationary P2
+        if (p1.isDashing && !p2.isDashing) {
+            console.log(`Collision: Player ${p1.id} dashed into Player ${p2.id}`);
+            // P2 takes damage and knockback from P1's position
+            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+            // Stop P1's dash immediately upon hitting
+            p1._endDash();
+        }
+        // Scenario 2: P2 dashes into stationary P1
+        else if (p2.isDashing && !p1.isDashing) {
+            console.log(`Collision: Player ${p2.id} dashed into Player ${p1.id}`);
+            // P1 takes damage and knockback from P2's position
+            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            // Stop P2's dash immediately upon hitting
+            p2._endDash();
+        }
+        // Scenario 3: Head-on collision (both dashing)
+        else if (p1.isDashing && p2.isDashing) {
             console.log("Head-on collision!");
-            const collisionAngle = Math.atan2(dy, dx);
-            // Knockback direction is away from the collision point
-            const knockbackDirX1 = -Math.cos(collisionAngle);
-            const knockbackDirY1 = -Math.sin(collisionAngle);
-            const knockbackDirX2 = Math.cos(collisionAngle);
-            const knockbackDirY2 = Math.sin(collisionAngle);
 
-            // Both take damage from the other's dash
-            // Pass knockback direction for the takeDamage function
-            p2.takeDamage(p1.dashDamage, knockbackDirX2, knockbackDirY2);
-            p1.takeDamage(p2.dashDamage, knockbackDirX1, knockbackDirY1);
+            // Both take damage from the other, knockback originates from opponent's center
+            // We pass the *opponent's* coordinates as the source for knockback direction
+            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
 
             // Both dashes are stopped immediately after collision resolution
-            p1.isDashing = false; p1.dashVelX = 0; p1.dashVelY = 0;
-            p2.isDashing = false; p2.dashVelX = 0; p2.dashVelY = 0;
+            // Use _endDash carefully here as it checks for buffered input, which might not be desired in head-on?
+            // For now, let's just stop them directly. Revisit if buffering feels wrong.
+            p1.isDashing = false; p1.dashVelX = 0; p1.dashVelY = 0; p1.dashDamage = 0;
+            p2.isDashing = false; p2.dashVelX = 0; p2.dashVelY = 0; p2.dashDamage = 0;
 
-            // Check for game over immediately after head-on collision damage
+            // Check for game over immediately *after* both damages are applied
+            // (Handles cases where both die simultaneously -> Draw)
             if (p1.hp <= 0 && p2.hp <= 0) {
-                endGame(null); // Draw or special condition
+                endGame(null); // Draw
             } else if (p1.hp <= 0) {
-                endGame(p2);
+                endGame(p2); // P2 wins
             } else if (p2.hp <= 0) {
-                endGame(p1);
+                endGame(p1); // P1 wins
             }
         }
+        // Note: If neither is dashing, they can harmlessly overlap (or push slightly if physics were added)
     }
 }
 
-function handleCollision(attacker, defender) {
-    // Check distance between centers
-    const dx = defender.x - attacker.x;
-    const dy = defender.y - attacker.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const minDistance = attacker.radius + defender.radius;
-
-    if (distance < minDistance) {
-        console.log(`Collision! Player ${attacker.id} hit Player ${defender.id}`);
-
-        // Calculate knockback direction (away from attacker's center)
-        const knockbackAngle = Math.atan2(dy, dx);
-        const knockbackDirX = Math.cos(knockbackAngle);
-        const knockbackDirY = Math.sin(knockbackAngle);
-
-        // Defender takes damage and knockback
-        defender.takeDamage(attacker.dashDamage, knockbackDirX, knockbackDirY);
-
-        // Stop attacker's dash immediately upon hitting the defender
-        attacker.isDashing = false;
-        attacker.dashVelX = 0;
-        attacker.dashVelY = 0;
-
-        // Check for game over immediately after collision damage
-        if (defender.hp <= 0) {
-            endGame(attacker);
-        }
-    }
-}
 
 // --- Game Loop ---
+
 function gameLoop(timestamp) {
-    if (gameOver) return;
+    if (gameOver) return; // Stop the loop if game has ended
 
     const currentTime = Date.now();
-    const elapsed = currentTime - gameStartTime;
+    const elapsedMs = currentTime - gameStartTime;
 
-    // Handle safe zone shrinking
-    if (elapsed > config.zone.shrinkStartTime && elapsed < config.zone.shrinkStartTime + config.zone.shrinkDuration) {
-        const t = (elapsed - config.zone.shrinkStartTime) / config.zone.shrinkDuration;
-        const maxRadius = canvas.width / 2;
-        safeZoneRadius = maxRadius - (maxRadius - config.zone.minRadius) * t;
-    } else if (elapsed >= config.zone.shrinkStartTime + config.zone.shrinkDuration) {
-        safeZoneRadius = config.zone.minRadius;
+    // --- Updates ---
+    updateSafeZone(elapsedMs);
+    updateTimers(elapsedMs);
+    updatePlayers();
+    applyZoneDamage(); // Apply damage *after* player position update
+    checkCollisions(); // Check collisions *after* updates
+    updateParticles(); // Update particle positions and life
+
+    // --- Drawing ---
+    clearCanvas();
+    drawSafeZone();
+    drawParticles();
+    drawPlayers();
+
+    // Request next frame
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+// --- Game Loop Helper Functions ---
+
+function updateSafeZone(elapsedMs) {
+    const zoneConfig = config.zone;
+    const initialRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2; // Recalculate initial based on canvas size
+
+    if (elapsedMs > zoneConfig.shrinkStartTime && elapsedMs < zoneConfig.shrinkStartTime + zoneConfig.shrinkDuration) {
+        // Calculate shrinking progress (0 to 1)
+        const shrinkProgress = (elapsedMs - zoneConfig.shrinkStartTime) / zoneConfig.shrinkDuration;
+        // Interpolate radius between initial and minimum
+        safeZoneRadius = initialRadius - (initialRadius - zoneConfig.minRadius) * shrinkProgress;
+    } else if (elapsedMs >= zoneConfig.shrinkStartTime + zoneConfig.shrinkDuration) {
+        // If shrink duration passed, clamp to minimum radius
+        safeZoneRadius = zoneConfig.minRadius;
+    }
+    // Otherwise (before shrink start), radius remains at initial value (set in initGame)
+}
+
+function updateTimers(elapsedMs) {
+    // Update main game timer
+    const remainingTime = Math.max(0, config.zone.totalGameTime - elapsedMs);
+    const secondsLeft = Math.ceil(remainingTime / MS_PER_SECOND);
+    ui.timer.textContent = `Time Left: ${secondsLeft}s`;
+
+    // Update shrink countdown timer
+    const shrinkRemaining = Math.max(0, config.zone.shrinkStartTime - elapsedMs);
+    if (shrinkRemaining > 0) {
+        const shrinkSeconds = Math.ceil(shrinkRemaining / MS_PER_SECOND);
+        ui.shrinkTimer.textContent = `Shrink In: ${shrinkSeconds}s`;
+    } else if (elapsedMs < config.zone.shrinkStartTime + config.zone.shrinkDuration) {
+        ui.shrinkTimer.textContent = 'Shrinking...';
+    } else {
+        ui.shrinkTimer.textContent = 'Zone Closed!';
     }
 
-    // Apply damage if outside safe zone
+
+    // Check for game over due to time running out
+    if (remainingTime <= 0 && !gameOver) {
+        console.log("Time's up!");
+        // Determine winner by HP, or draw if equal
+        const [p1, p2] = players;
+        if (p1.hp > p2.hp) endGame(p1);
+        else if (p2.hp > p1.hp) endGame(p2);
+        else endGame(null); // Draw if HP is equal
+    }
+}
+
+function updatePlayers() {
+    players.forEach(player => player.update());
+}
+
+function applyZoneDamage() {
     players.forEach(player => {
         const dx = player.x - safeZoneCenter.x;
         const dy = player.y - safeZoneCenter.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const currentlyInSafeZone = distance <= safeZoneRadius;
+        const distanceSquared = dx * dx + dy * dy;
+        const isInside = distanceSquared <= safeZoneRadius * safeZoneRadius;
 
-        if (!currentlyInSafeZone) {
-            player.takeDamage(config.zone.damagePerSecondOutside * (1 / 60), 0, 0); // Assume 60fps
+        if (!isInside) {
+            // Only apply damage if they were outside
+            if (player.isInSafeZone) { // Log only when they first exit
+                console.log(`Player ${player.id} is outside the safe zone.`);
+            }
+            player.takeDamage(config.zone.damagePerTickOutside, player.x, player.y, 0); // No knockback from zone
             player.isInSafeZone = false;
+            // Optional: visual indicator for being outside (e.g., change color slightly)
+            // player.color = 'grey'; // Example: visual feedback
         } else {
-            // If player刚从圈外回到圈内，重置颜色
+            // If player re-enters the zone, reset their state/visuals if needed
             if (!player.isInSafeZone) {
-                player.color = player.originalColor;
+                // player.color = player.originalColor; // Reset color if changed
+                console.log(`Player ${player.id} re-entered the safe zone.`);
                 player.isInSafeZone = true;
             }
         }
     });
+    // Update HP bars AFTER potential zone damage
+    players.forEach(p => p.updateHpIndicator());
+}
 
-    // Show countdown timer
-    const remaining = Math.max(0, config.zone.totalGameTime - elapsed);
-    const seconds = Math.ceil(remaining / 1000);
-    document.getElementById('timer').textContent = `Time Left: ${seconds}s`;
-    const shrinkRemaining = Math.max(0, config.zone.shrinkStartTime - elapsed);
-    const shrinkSeconds = Math.ceil(shrinkRemaining / 1000);
-    shrinkTimerElement.textContent = shrinkRemaining > 0
-        ? `Shrink In: ${shrinkSeconds}s`
-        : 'Shrinking...';
-
-    if (remaining <= 0) {
-        endGame(null);
-    }
-
-    // Update State
-    players.forEach(player => player.update());
-    // Collision checks happen after updates
-    checkCollisions();
-
-    // Update UI (Reflects state AFTER updates and collisions)
-    p1HpElement.textContent = Math.max(0, Math.round(players[0].hp));
-    p2HpElement.textContent = Math.max(0, Math.round(players[1].hp));
-
-    // Draw (Reflects the very latest state)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function updateParticles() {
     particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
         p.life--;
-        p.radius *= 0.95;
+        // Optional: Make particles fade or shrink
+        // p.size *= 0.98;
     });
+    // Remove dead particles
     particles = particles.filter(p => p.life > 0);
+}
+
+
+// --- Drawing Helper Functions ---
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawSafeZone() {
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Red semi-transparent circle
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(safeZoneCenter.x, safeZoneCenter.y, safeZoneRadius, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+function drawParticles() {
     particles.forEach(p => {
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.font = `${p.size}px sans-serif`;
+        ctx.save(); // Save current context state
+        ctx.translate(p.x, p.y); // Move origin to particle position
+        ctx.rotate(p.rotation); // Rotate
+        ctx.font = `${Math.max(1, p.size)}px sans-serif`; // Use particle size, ensure minimum 1px
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.globalAlpha = p.life / 40; // 逐渐变透明（假设最大 life 是 40）
-        ctx.fillText('💩', 0, 0);
-        ctx.globalAlpha = 1;
-        ctx.restore();
+        // Fade out particle based on remaining life
+        ctx.globalAlpha = Math.max(0, p.life / (config.particle.baseLife + config.particle.randomLifeBoost)); // Fade based on max possible life
+        ctx.fillStyle = 'saddlebrown'; // Poop color
+        ctx.fillText('💩', 0, 0); // Draw emoji at the rotated origin
+        ctx.restore(); // Restore context state (alpha, translation, rotation)
     });
-    drawSafeZoneCircle();
-    players.forEach(player => player.draw(ctx));
+}
 
-    animationFrameId = requestAnimationFrame(gameLoop);
+function drawPlayers() {
+    players.forEach(player => player.draw(ctx));
 }
 
 // --- Input Handling ---
-function setupInputListeners() {
-    // Player 1: Mouse
-    canvas.addEventListener('mousedown', (event) => {
-        if (event.button === 0 && !gameOver) { // Left mouse button
-            players[0].isControlDown = true;
-            // Attempt to start charge (will only work if not dashing)
-            players[0].startCharge();
-        }
-    });
-    canvas.addEventListener('mouseup', (event) => {
-        if (event.button === 0 && !gameOver) { // Left mouse button
-            // Only release charge if the control was actually down for this player
-            if (players[0].isControlDown) {
-                players[0].isControlDown = false;
-                players[0].releaseCharge(); // Attempt to release charge
-            }
-        }
-    });
-    canvas.addEventListener('contextmenu', (event) => event.preventDefault()); // Prevent right-click menu
-    canvas.addEventListener('mouseleave', (event) => {
-        // If mouse leaves canvas while button is held, consider it a release
-        if (players[0].isControlDown && event.button === 0 && !gameOver) {
-            players[0].isControlDown = false;
-            players[0].releaseCharge();
-        }
-    });
 
-    // Player 2: Keyboard
-    window.addEventListener('keydown', (event) => {
-        if (event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown && !gameOver) {
-            players[1].isControlDown = true;
-            // Attempt to start charge (will only work if not dashing)
-            players[1].startCharge();
-        }
-    });
-    window.addEventListener('keyup', (event) => {
-        if (event.key.toLowerCase() === players[1].controlKey && !gameOver) {
-            // Only release charge if the control was actually down for this player
-            if (players[1].isControlDown) {
-                players[1].isControlDown = false;
-                players[1].releaseCharge(); // Attempt to release charge
-            }
-        }
-    });
+function setupInputListeners() {
+    // Ensure previous listeners are removed if game resets
+    // (This simple example doesn't explicitly remove, relies on overwrite,
+    // but in complex apps, use removeEventListener)
+
+    // --- Player 1: Mouse Controls ---
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('contextmenu', preventContextMenu);
+    canvas.addEventListener('mouseleave', handleMouseLeave); // Handle case where mouse leaves canvas while button is down
+
+    // --- Player 2: Keyboard Controls ---
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 }
 
-function checkBothReady() {
-    if (p1Ready && p2Ready) {
-        document.getElementById('ready-container').style.display = 'none';
-        initGame();
+function handleMouseDown(event) {
+    if (event.button === 0 && !gameOver && players[0]) { // Left mouse button, game running, P1 exists
+        players[0].isControlDown = true;
+        players[0].startCharge(); // Attempt to start charge
     }
 }
 
+function handleMouseUp(event) {
+    if (event.button === 0 && !gameOver && players[0]) { // Left mouse button
+        // Only release charge if the control was actually tracked as 'down' for P1
+        if (players[0].isControlDown) {
+            players[0].isControlDown = false;
+            players[0].releaseCharge(); // Attempt to release charge
+        }
+    }
+}
+
+function preventContextMenu(event) {
+    event.preventDefault(); // Prevent browser's right-click menu
+}
+
+function handleMouseLeave(event) {
+    // If mouse leaves canvas while button is held, treat it as releasing the charge
+    if (players[0] && players[0].isControlDown && !gameOver) {
+        console.log("Mouse left canvas during charge, releasing.");
+        players[0].isControlDown = false;
+        players[0].releaseCharge();
+    }
+}
+
+function handleKeyDown(event) {
+    if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
+        // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
+        players[1].isControlDown = true;
+        players[1].startCharge(); // Attempt to start charge
+    }
+}
+
+function handleKeyUp(event) {
+    if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
+        // Check if game is running, P2 exists, key matches P2's control
+        // Only release charge if the control was actually tracked as 'down' for P2
+        if (players[1].isControlDown) {
+            players[1].isControlDown = false;
+            players[1].releaseCharge(); // Attempt to release charge
+        }
+    }
+}
+
+// --- Ready System ---
+
+function checkBothReady() {
+    if (p1Ready && p2Ready) {
+        ui.readyContainer.style.display = 'none'; // Hide ready buttons/status
+        initGame(); // Start the game
+    }
+}
+
+function setupReadyButtons() {
+    ui.p1.readyBtn.addEventListener('click', () => {
+        p1Ready = !p1Ready; // Toggle ready state
+        ui.p1.readyBtn.textContent = p1Ready ? 'Cancel Ready' : 'Player 1 Ready';
+        ui.p1.readyStatus.textContent = p1Ready ? 'Ready!' : 'Not Ready';
+        ui.p1.readyStatus.style.color = p1Ready ? 'lightgreen' : 'orange';
+        checkBothReady(); // Check if game should start
+    });
+
+    ui.p2.readyBtn.addEventListener('click', () => {
+        p2Ready = !p2Ready; // Toggle ready state
+        ui.p2.readyBtn.textContent = p2Ready ? 'Cancel Ready' : 'Player 2 Ready';
+        ui.p2.readyStatus.textContent = p2Ready ? 'Ready!' : 'Not Ready';
+        ui.p2.readyStatus.style.color = p2Ready ? 'lightgreen' : 'orange';
+        checkBothReady(); // Check if game should start
+    });
+}
+
 // --- Game Management ---
+
 function initGame() {
     console.log("Initializing game...");
     gameOver = false;
     winner = null;
-    gameOverElement.style.display = 'none';
+    particles = []; // Clear particles from previous game
+    ui.gameOver.style.display = 'none'; // Hide game over screen
     gameStartTime = Date.now();
-    safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2;
 
+    // Reset safe zone
+    safeZoneCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+    safeZoneRadius = Math.sqrt((canvas.width ** 2 + canvas.height ** 2)) / 2; // Initial radius covers canvas
+
+    // Create player robots
     const padding = 100; // Initial distance from edge
     players = [
         new Robot(padding, canvas.height / 2, 'red', 1),
         new Robot(canvas.width - padding, canvas.height / 2, 'blue', 2, 'l') // P2 uses 'l' key
     ];
 
-    // Reset UI elements
-    p1HpElement.textContent = config.robot.maxHp;
-    p2HpElement.textContent = config.robot.maxHp;
-    p1ChargeElement.style.width = '0%';
-    p2ChargeElement.style.width = '0%';
-
-    if (animationFrameId) cancelAnimationFrame(animationFrameId); // Clear previous loop if any
-    setupInputListeners(); // Re-setup inputs for the new game
-    gameLoop(); // Start the main game loop
-}
-
-function endGame(winningPlayer) {
-    if (gameOver) return; // Prevent multiple calls
-    gameOver = true;
-    winner = winningPlayer;
-
-    if (winningPlayer) {
-        console.log(`Game Over! Player ${winner.id} wins!`);
-        winnerMessageElement.textContent = `Player ${winner.id} (${winner.color}) wins!`;
-    } else {
-        console.log("Game Over! It's a draw!");
-        winnerMessageElement.textContent = `Draw!`; // Handle draw case
-    }
-    gameOverElement.style.display = 'block';
-
-    // Stop players' actions
+    // Reset UI elements to initial state
     players.forEach(p => {
-        p.isCharging = false;
-        p.isDashing = false;
-        p.dashVelX = 0;
-        p.dashVelY = 0;
+        p.updateHpIndicator();
         p.updateChargeIndicator(0);
     });
+    ui.timer.textContent = `Time Left: ${Math.ceil(config.zone.totalGameTime / MS_PER_SECOND)}s`;
+    ui.shrinkTimer.textContent = `Shrink In: ${Math.ceil(config.zone.shrinkStartTime / MS_PER_SECOND)}s`;
 
+
+    // Cancel any previous game loop
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
     }
-    // Reset ready state for both players
-    p1Ready = false;
-    p2Ready = false;
-    p1ReadyBtn.disabled = false;
-    p2ReadyBtn.disabled = false;
-    p1ReadyStatus.textContent = 'Not Ready';
-    p2ReadyStatus.textContent = 'Not Ready';
-    document.getElementById('ready-container').style.display = 'block';
+
+    setupInputListeners(); // Make sure input listeners are active for the new game
+    gameLoop(); // Start the main game loop
 }
 
-function prepareForRematch() {
-    console.log("Preparing rematch, waiting for both players to Ready...");
-    gameOverElement.style.display = 'none';
-    particles = [];
-    p1Ready = false;
-    p2Ready = false;
-    p1ReadyBtn.disabled = false;
-    p2ReadyBtn.disabled = false;
-    p1ReadyStatus.textContent = 'Not Ready';
-    p2ReadyStatus.textContent = 'Not Ready';
-    document.getElementById('ready-container').style.display = 'block';
+function endGame(winningPlayer) {
+    if (gameOver) return; // Prevent function running multiple times if called rapidly
+
+    gameOver = true;
+    winner = winningPlayer;
+    cancelAnimationFrame(animationFrameId); // Stop the game loop
+    animationFrameId = null;
+
+    // Log result and update UI message
+    if (winner) {
+        console.log(`Game Over! Player ${winner.id} wins!`);
+        ui.winnerMessage.textContent = `Player ${winner.id} (${winner.color}) wins!`;
+    } else {
+        console.log("Game Over! It's a draw!");
+        ui.winnerMessage.textContent = `It's a Draw!`;
+    }
+    ui.gameOver.style.display = 'block'; // Show game over screen
+
+    // Stop any ongoing player actions (like charging)
+    players.forEach(p => {
+        p.isCharging = false;
+        p.isDashing = false; // Stop dashing visually/logically
+        p.dashVelX = 0;
+        p.dashVelY = 0;
+        p.updateChargeIndicator(0); // Reset charge bars
+        p.isControlDown = false; // Prevent accidental charge buffering on game end
+    });
+
+    // Reset ready state for rematch
+    resetReadyState();
+    ui.readyContainer.style.display = 'block'; // Show ready container again
 }
 
-function resetGame() {
-    console.log("Resetting game...");
-    particles = [];
-    // 重新等待玩家准备
+function resetReadyState() {
     p1Ready = false;
     p2Ready = false;
-    p1ReadyBtn.disabled = false;
-    p2ReadyBtn.disabled = false;
-    p1ReadyStatus.textContent = 'Not Ready';
-    p2ReadyStatus.textContent = 'Not Ready';
-    document.getElementById('ready-container').style.display = 'block';
+    ui.p1.readyBtn.disabled = false;
+    ui.p2.readyBtn.disabled = false;
+    ui.p1.readyBtn.textContent = 'Player 1 Ready';
+    ui.p2.readyBtn.textContent = 'Player 2 Ready';
+    ui.p1.readyStatus.textContent = 'Not Ready';
+    ui.p2.readyStatus.textContent = 'Not Ready';
+    ui.p1.readyStatus.style.color = 'orange';
+    ui.p2.readyStatus.style.color = 'orange';
 }
 
-// --- Start the Game ---
-// initGame(); // Initial game start when the script loads
+// --- Background Effects ---
 
 function generateStars(count, width, height) {
-    const container = document.getElementById('star-background');
-    container.innerHTML = '';
+    const container = ui.starBackground;
+    if (!container) return;
+    container.innerHTML = ''; // Clear existing stars
     for (let i = 0; i < count; i++) {
         const star = document.createElement('div');
-        star.className = 'star';
-        const size = Math.random() * 2 + 0.5;
+        star.className = 'star'; // Use CSS for styling
+        const size = Math.random() * 2 + 0.5; // Random size
         star.style.width = `${size}px`;
         star.style.height = `${size}px`;
+        // Random position within the container dimensions
         star.style.top = `${Math.random() * height}px`;
         star.style.left = `${Math.random() * width}px`;
+        // Optional: Add random animation delays for twinkling effect via CSS
+        // star.style.animationDelay = `${Math.random() * 5}s`;
         container.appendChild(star);
     }
 }
 
 function setupStarfield() {
-    const update = () => {
+    // Function to update stars based on window size
+    const updateStars = () => {
+        // Use window dimensions for a full-screen background effect
         generateStars(200, window.innerWidth, window.innerHeight);
     };
-    window.addEventListener('resize', update);
-    update();
+    // Update stars when the window is resized
+    window.addEventListener('resize', updateStars);
+    // Generate initial stars
+    updateStars();
 }
 
-setupStarfield();
+// --- Initialization ---
+function main() {
+    console.log("Game script loaded. Setting up.");
+    setupStarfield(); // Initialize background
+    setupReadyButtons(); // Set up the ready system listeners
+    resetReadyState(); // Ensure initial state is 'not ready'
+    ui.readyContainer.style.display = 'block'; // Show the ready container initially
+    ui.gameOver.style.display = 'none'; // Hide game over screen initially
 
-p1ReadyBtn.addEventListener('click', () => {
-    p1Ready = !p1Ready;
-    p1ReadyBtn.textContent = p1Ready ? 'Cancel Ready' : 'Player 1 Ready';
-    p1ReadyStatus.textContent = p1Ready ? 'Ready!' : 'Not Ready';
-    checkBothReady();
-});
-
-p2ReadyBtn.addEventListener('click', () => {
-    p2Ready = !p2Ready;
-    p2ReadyBtn.textContent = p2Ready ? 'Cancel Ready' : 'Player 2 Ready';
-    p2ReadyStatus.textContent = p2Ready ? 'Ready!' : 'Not Ready';
-    checkBothReady();
-});
-
-function drawSafeZoneCircle() {
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(safeZoneCenter.x, safeZoneCenter.y, safeZoneRadius, 0, Math.PI * 2);
-    ctx.stroke();
+    // The game will start via checkBothReady() when both players click their ready buttons.
+    // initGame(); // DO NOT start the game immediately anymore.
 }
+
+// Run the main setup function when the script loads
+main();
