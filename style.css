@@ -1,3 +1,8 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
 body {
     display: flex;
     flex-direction: column; /* Stack title and game vertically */
@@ -99,4 +104,49 @@ canvas {
     background: white;
     border-radius: 50%;
     opacity: 0.8;
+}
+
+#p1-ready-status, #p2-ready-status {
+    width: 100px;
+}
+
+#p1-ready-btn, #p2-ready-btn {
+    width: 120px;
+}
+
+#ready-container, #timer, #shrink-timer {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 0;
+    border-radius: 12px;
+    color: white;
+    font-weight: bold;
+    backdrop-filter: blur(4px);
+}
+body {
+    font-family: 'JetBrains Mono', monospace;
+    color: white;
+}
+
+h1, .game-title {
+    text-shadow: 0 0 4px #ffcc00;
+}
+button {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+#star-background {
+    pointer-events: none;
+    z-index: -1;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(50,0,80,0.2), transparent 70%);
 }
