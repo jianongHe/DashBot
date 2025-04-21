@@ -8,52 +8,62 @@
 </head>
 <body>
 <div id="star-background"></div>
-<h1>PoopBot</h1>
-<div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
-    <div id="timer" class="timer-box">Time Left: </div>
-    <div id="shrink-timer" class="timer-box shrink">Shrink In: </div>
-</div>
 
-<div id="game-container">
-    <div id="ui">
-        <div class="player-info">
-            <div id="player1-info">
-                <div>
-                    Player 1 (Mouse): <span id="p1-hp">100</span> HP
-                    <div id="p1-charge" class="charge-indicator"></div>
-                </div>
-            </div>
-            <div id="player2-info">
-                <div>
-                    Player 2 (Keyboard 'L'): <span id="p2-hp">100</span> HP
-                    <div id="p2-charge" class="charge-indicator"></div>
-                </div>
-            </div>
+<div class="wrapper">
+    <div class="main">
+        <h1>PoopBot</h1>
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
+            <div id="timer" class="timer-box">Time Left: </div>
+            <div id="shrink-timer" class="timer-box shrink">Shrink In: </div>
         </div>
 
-
-        <div id="ready-container" class="ready-container">
-            <div class="ready-box">
-                <div class="ready-p-item">
-                    <button id="p1-ready-btn" class="ready-button">Player 1 Ready</button>
-                    <span id="p1-ready-status" class="ready-status">Not Ready</span>
+        <div id="game-container">
+            <div id="ui">
+                <div class="player-info">
+                    <div id="player1-info">
+                        <div>
+                            Player 1 (Mouse): <span id="p1-hp">100</span> HP
+                            <div id="p1-charge" class="charge-indicator"></div>
+                        </div>
+                    </div>
+                    <div id="player2-info">
+                        <div>
+                            Player 2 (Keyboard 'L'): <span id="p2-hp">100</span> HP
+                            <div id="p2-charge" class="charge-indicator"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="ready-p-item">
-                    <button id="p2-ready-btn" class="ready-button">Player 2 Ready</button>
-                    <span id="p2-ready-status" class="ready-status">Not Ready</span>
-                </div>
 
+                <div id="ready-container" class="ready-container">
+                    <div class="ready-box">
+                        <div class="ready-p-item">
+                            <button id="p1-ready-btn" class="ready-button">Player 1 Ready</button>
+                            <span id="p1-ready-status" class="ready-status">Not Ready</span>
+                        </div>
+
+                        <div class="ready-p-item">
+                            <button id="p2-ready-btn" class="ready-button">Player 2 Ready</button>
+                            <span id="p2-ready-status" class="ready-status">Not Ready</span>
+                        </div>
+
+                    </div>
+                </div>
             </div>
+            <div id="game-over" class="game-over-screen">
+                <h2>Game Over!</h2>
+                <p id="winner-message"></p>
+                <button onclick="hideGameOverScreen()">Ok</button>
+            </div>
+            <canvas id="gameCanvas" width="1000" height="600"></canvas>
         </div>
+        <div class="room-list">room-list</div>
     </div>
-    <div id="game-over" class="game-over-screen">
-        <h2>Game Over!</h2>
-        <p id="winner-message"></p>
-        <button onclick="hideGameOverScreen()">Ok</button>
-    </div>
-    <canvas id="gameCanvas" width="1000" height="600"></canvas>
 </div>
+
+
+
+
 <script src="game.js"></script>
 </body>
 </html>

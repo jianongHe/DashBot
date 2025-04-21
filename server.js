@@ -7,6 +7,8 @@ const wss = new WebSocket.Server({ port: PORT });
 console.log(`Server running on ws://localhost:${PORT}`);
 
 const rooms = new Map(); // roomId -> Room
+const lobbyClients = new Set();
+const matchQueue   = [];
 
 class Room {
     constructor(id) {
@@ -142,6 +144,11 @@ class PlayerConnection {
             case 'collision':
                 room.broadcast('collision', {});
                 break;
+            case 'match_request':
+                matchQueue.push(this.ws);
+                tryMatch();
+            case 'leave_room':
+                handleLeave(this.ws);
         }
     }
 
@@ -170,3 +177,58 @@ setInterval(() => {
         room.broadcastState();
     }
 }, TICK_RATE);
+
+function tryMatch() {
+    if (matchQueue.length >= 2) {
+        const [a, b] = matchQueue.splice(0, 2);
+        const room = findAvailableRoom(); // 或 new Room(...)
+        rooms.set(room.id, room);
+        room.addPlayer(a);
+        room.addPlayer(b);
+        lobbyClients.delete(a);
+        lobbyClients.delete(b);
+        broadcastLobby();
+        broadcastRoomList();
+        [a,b].forEach((c,i) => {
+            c.send(JSON.stringify({
+                type: 'match_found',
+                data: { roomId: room.id, playerId: i+1 }
+            }));
+        });
+    }
+}
+
+function handleLeave(ws) {
+    // 找到玩家对应的 room 并 removePlayer
+    for (const room of rooms.values()) {
+        for (const [pid, conn] of room.players) {
+            if (conn.ws === ws) {
+                room.removePlayer(pid);
+                ws.send(JSON.stringify({ type: 'leave_room_ack' }));
+                lobbyClients.add(ws);
+                broadcastLobby();
+                broadcastRoomList();
+                return;
+            }
+        }
+    }
+}
+
+function broadcastLobby() {
+    const data = {
+        online: lobbyClients.size,
+        visitors: [...lobbyClients].map((_,i) => `游客${i+1}`)
+    };
+    lobbyClients.forEach(ws =>
+        ws.send(JSON.stringify({ type: 'lobby_update', data }))
+    );
+}
+
+function broadcastRoomList() {
+    const list = [...rooms.values()].map(r => ({
+        id: r.id, count: r.players.size
+    }));
+    lobbyClients.forEach(ws =>
+        ws.send(JSON.stringify({ type: 'room_list_update', data: { rooms: list } }))
+    );
+}

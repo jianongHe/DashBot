@@ -70,6 +70,28 @@ canvas {
     border-bottom-left-radius: 10px;
 }
 
+.wrapper {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    position: relative;
+}
+
+.wrapper .main{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.room-list {
+    position: absolute;
+    left: -320px;
+    width: 300px;
+    height: 100%;
+    background-color: #afaff8;
+}
+
 .charge-indicator {
     height: 5px;
     background-color: limegreen;

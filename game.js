@@ -243,7 +243,14 @@ const ui = {
     shrinkTimer: document.getElementById('shrink-timer'),
     timer: document.getElementById('timer'),
     readyContainer: document.getElementById('ready-container'),
-    starBackground: document.getElementById('star-background')
+    starBackground: document.getElementById('star-background'),
+
+    // 新增大厅/房间切换相关
+    lobbyEl:       document.getElementById('lobby'),
+    gameContainer: document.getElementById('game-container'),
+    matchBtn:      document.getElementById('match-btn'),
+    localBtn:      document.getElementById('local-btn'),
+    exitRoomBtn:   document.getElementById('exit-room-btn'),
 };
 
 // --- Robot Class ---
@@ -1422,6 +1429,9 @@ function main() {
     resetReadyState(); // Ensure initial state is 'not ready'
     ui.gameOver.style.display = 'none'; // Hide game over screen initially
 
+    setupLobbyButtons();
+    showLobby();     // 默认先进大厅
+
     // The game will start via checkBothReady() when both players click their ready buttons.
     // initGame(); // DO NOT start the game immediately anymore.
 }
@@ -1434,7 +1444,7 @@ main();
 // ============================
 /* --- NetworkAdapter Setup --- */
 
-const isRemoteMode = true; // toggle this to false for local play
+let isRemoteMode = false; // toggle this to false for local play
 
 class NetworkAdapter {
     constructor() {
@@ -1514,7 +1524,24 @@ class NetworkAdapter {
                         }
                     }
                 }
-            } break;
+            }
+            break;
+            case 'lobby_update':
+                document.getElementById('online-count').textContent = data.online;
+                updateVisitorList(data.visitors);
+                break;
+            case 'room_list_update':
+                updateRoomList(data.rooms);
+                break;
+            case 'match_found':
+                isRemoteMode = true;
+                network.playerId = data.playerId;
+                hideLobby();
+                initGame();
+                break;
+            case 'leave_room_ack':
+                showLobby();
+                break;
         }
     }
 
@@ -1642,3 +1669,66 @@ Robot.prototype.releaseCharge = function () {
 //     }
 //
 // };
+// 切换大厅/游戏视图
+// --- 切换 大厅 / 游戏 区域 ---
+function showLobby() {
+    ui.lobbyEl.style.display       = 'block';
+}
+function hideLobby() {
+    ui.lobbyEl.style.display       = 'none';
+}
+
+// --- 按钮逻辑绑定 ---
+function setupLobbyButtons() {
+    ui.localBtn.addEventListener('click', () => {
+        isRemoteMode = false;
+        hideLobby();
+        initGame();
+    });
+
+    ui.matchBtn.addEventListener('click', () => {
+        network.send('match_request', {});
+        ui.matchBtn.textContent = '匹配中…';
+    });
+
+    ui.exitRoomBtn.addEventListener('click', () => {
+        network.send('leave_room', {});
+    });
+}
+
+// --- WebSocket 消息处理（在 NetworkAdapter.handleMessage 里加入） ---
+function handleLobbyMessages(type, data) {
+    switch (type) {
+        case 'lobby_update':
+            document.getElementById('online-count').textContent = data.online;
+            updateVisitorList(data.visitors);
+            break;
+
+        case 'room_list_update':
+            updateRoomList(data.rooms);
+            break;
+
+        case 'match_found':
+            isRemoteMode       = true;
+            network.playerId   = data.playerId;
+            hideLobby();
+            initGame();
+            break;
+
+        case 'leave_room_ack':
+            showLobby();
+            break;
+    }
+}
+
+// --- 列表刷新辅助方法 ---
+function updateVisitorList(visitors) {
+    const ul = document.getElementById('visitor-list');
+    ul.innerHTML = visitors.map(v => `<li>${v}</li>`).join('');
+}
+function updateRoomList(rooms) {
+    const ul = document.getElementById('room-list');
+    ul.innerHTML = rooms
+        .map(r => `<li>房间 ${r.id} (${r.count}/2)</li>`)
+        .join('');
+}
