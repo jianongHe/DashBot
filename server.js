@@ -102,24 +102,22 @@ class PlayerConnection {
                 break;
             case 'damage': {
                 const { targetId, amount, fromX, fromY, knockbackMult } = data;
-                const target = room.states[targetId];
-                if (!target) return;
+                // 确保目标存在
+                if (!(targetId in this.room.hp)) return;
 
-                // 需要先检查 hp 是否已初始化（第一次同步可能还没就绪）
-                if (typeof target.hp !== 'number') target.hp = 300;
+                // 从 room.hp 减血，不再用 room.states
+                this.room.hp[targetId] = Math.max(0, this.room.hp[targetId] - amount);
+                const newHp = this.room.hp[targetId];
 
-                target.hp = Math.max(0, target.hp - amount);
-
-                // 广播给所有人：这个玩家的 hp 变化了
-                room.broadcast('hp_update', {
+                // 广播新的血量
+                this.room.broadcast('hp_update', {
                     targetId,
-                    hp: target.hp,
+                    hp: newHp,
                     fromX,
                     fromY,
                     amount,
-                    knockbackMult // 新增参数
+                    knockbackMult
                 });
-
                 break;
             }
             case 'ready':

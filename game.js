@@ -289,6 +289,7 @@ class Robot {
             this.isCharging = true;
             this.chargeStartTime = Date.now();
             this.chargePower = 0; // Reset power at start
+            this.dashDamage = 0; // ← 这一行是关键，避免旧伤害残留
             console.log(`Player ${this.id} started charging.`);
         }
     }
@@ -328,7 +329,7 @@ class Robot {
         if (this.hp <= 0) return;
 
         this.hp -= damage;
-        console.log(`Player ${this.id} took ${damage.toFixed(0)} damage. HP left: ${this.hp.toFixed(0)}`);
+        console.log(`Player ${this.id} took ${damage.toFixed(0)} damage.`);
 
         this.updateHpIndicator(); // ← 加在这！
 
@@ -688,30 +689,47 @@ function checkCollisions() {
 // 新增统一碰撞处理
 function handleCollision(p1, p2) {
     const bothDashing = p1.isDashing && p2.isDashing;
-    const p1Dashing = p1.isDashing && !p2.isDashing;
-    const p2Dashing = !p1.isDashing && p2.isDashing;
+    const p1Dashing  = p1.isDashing && !p2.isDashing;
+    const p2Dashing  = !p1.isDashing && p2.isDashing;
 
+    if (!isRemoteMode) {
+        // 本地模式照旧
+        if (bothDashing) {
+            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+            stopDash(p1); stopDash(p2);
+            resolveDeath(p1, p2);
+        } else if (p1Dashing) {
+            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+            p1._endDash();
+        } else if (p2Dashing) {
+            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            p2._endDash();
+        }
+        return;
+    }
+
+    // 网络模式由 host(1) 广播伤害
     if (bothDashing) {
         p1.takeDamage(p2.dashDamage, p2.x, p2.y);
         p2.takeDamage(p1.dashDamage, p1.x, p1.y);
-
-        if (network.playerId === p1.id) {
+        if (network.playerId === 1) {
             network.broadcastDamage(p1, p2.dashDamage, p2.x, p2.y, 1);
             network.broadcastDamage(p2, p1.dashDamage, p1.x, p1.y, 1);
         }
-
-        stopDash(p1);
-        stopDash(p2);
+        stopDash(p1); stopDash(p2);
         resolveDeath(p1, p2);
+
     } else if (p1Dashing) {
         p2.takeDamage(p1.dashDamage, p1.x, p1.y);
-        if (network.playerId === p1.id) {
+        if (network.playerId === 1) {
             network.broadcastDamage(p2, p1.dashDamage, p1.x, p1.y, 1);
         }
         p1._endDash();
+
     } else if (p2Dashing) {
         p1.takeDamage(p2.dashDamage, p2.x, p2.y);
-        if (network.playerId === p2.id) {
+        if (network.playerId === 1) {
             network.broadcastDamage(p1, p2.dashDamage, p2.x, p2.y, 1);
         }
         p2._endDash();
@@ -979,28 +997,24 @@ function applyZoneDamage() {
     players.forEach(player => {
         const dx = player.x - safeZoneCenter.x;
         const dy = player.y - safeZoneCenter.y;
-        const distanceSquared = dx * dx + dy * dy;
-        const isInside = distanceSquared <= safeZoneRadius * safeZoneRadius;
+        const isInside = dx*dx + dy*dy <= safeZoneRadius*safeZoneRadius;
 
         if (!isInside) {
-            // Only apply damage if they were outside
-            if (player.isInSafeZone) { // Log only when they first exit
-                console.log(`Player ${player.id} is outside the safe zone.`);
-            }
-            player.takeDamage(config.zone.damagePerTickOutside, player.x, player.y, 0); // No knockback from zone
+            const damage = config.zone.damagePerTickOutside;
+            player.takeDamage(damage, player.x, player.y, 0);
             player.isInSafeZone = false;
-            // Optional: visual indicator for being outside (e.g., change color slightly)
-            // player.color = 'grey'; // Example: visual feedback
+
+            // 把自己受到的毒圈伤害同步给服务器
+            if (isRemoteMode && network.playerId === player.id) {
+                network.broadcastDamage(player, damage, player.x, player.y, 0);
+            }
         } else {
-            // If player re-enters the zone, reset their state/visuals if needed
             if (!player.isInSafeZone) {
-                // player.color = player.originalColor; // Reset color if changed
-                console.log(`Player ${player.id} re-entered the safe zone.`);
                 player.isInSafeZone = true;
+                console.log(`Player ${player.id} re-entered the safe zone.`);
             }
         }
     });
-    // Update HP bars AFTER potential zone damage
     players.forEach(p => p.updateHpIndicator());
 }
 
@@ -1442,6 +1456,7 @@ class NetworkAdapter {
         switch (type) {
             case 'joined':
                 this.playerId = data.playerId;
+                console.log("network.playerId =", network.playerId);
                 break;
             case 'ready_update':
                 this.readyStates = data.readyStatus;
@@ -1480,16 +1495,26 @@ class NetworkAdapter {
                     // 不要用 Object.assign，避免把 hp 覆盖
                 });
                 break;
-            case 'hp_update':
+            case 'hp_update': {
                 const p = players[data.targetId - 1];
                 if (p) {
                     p.hp = data.hp;
                     p.updateHpIndicator();
-                    // p.takeDamage(data.amount, data.fromX, data.fromY, data.knockbackMult || 1);
-                    p.triggerHitEffect();
-
+                    // 播放闪烁和击退动画
+                    if (data.amount > 0) {
+                        p.triggerHitEffect();
+                        if (!p.isDashing && data.knockbackMult > 0) {
+                            const dx = p.x - data.fromX;
+                            const dy = p.y - data.fromY;
+                            const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                            const dirX = dx / dist, dirY = dy / dist;
+                            const force = config.dash.knockbackForce * data.knockbackMult;
+                            const scale = Math.max(0.1, data.amount / config.charge.maxDamage);
+                            p.applyKnockback(dirX, dirY, force * scale);
+                        }
+                    }
                 }
-                break;
+            } break;
         }
     }
 
