@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    container_name: poopbot_web
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
