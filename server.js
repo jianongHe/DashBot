@@ -48,11 +48,27 @@ class Room {
         this.readyStatus[playerId] = isReady;
         this.broadcast('ready_update', { readyStatus: this.readyStatus });
 
-        const allReady = Object.values(this.readyStatus).length === 2 &&
-            Object.values(this.readyStatus).every(v => v);
-        if (allReady) {
-            this.broadcast('game_start', {});
-        }
+        const allReady = Object.keys(this.readyStatus).length === 2
+            && Object.values(this.readyStatus).every(v => v);
+        if (!allReady) return;
+
+        // 1. 重置本局血量
+        this.hp[1] = 300;
+        this.hp[2] = 300;
+
+        // 2. 广播初始血量给所有客户端（amount=0 表示初始化，无闪烁效果）
+        [1,2].forEach(id => {
+            this.broadcast('hp_update', {
+                targetId: id,
+                hp: this.hp[id],
+                fromX: 0, fromY: 0,
+                amount: 0,
+                knockbackMult: 0
+            });
+        });
+
+        // 3. 正式开始游戏
+        this.broadcast('game_start', {});
     }
 
     broadcast(type, data) {
