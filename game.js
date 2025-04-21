@@ -330,6 +330,8 @@ class Robot {
         this.hp -= damage;
         console.log(`Player ${this.id} took ${damage.toFixed(0)} damage. HP left: ${this.hp.toFixed(0)}`);
 
+        this.updateHpIndicator(); // ← 加在这！
+
         // Apply Knockback only if NOT currently dashing (prevents weird self-interaction in head-ons)
         // and if damage was actually dealt (relevant for zone damage with 0 knockback)
         if (!this.isDashing && damage > 0 && knockbackForceMultiplier > 0) {
@@ -663,62 +665,69 @@ class Robot {
 
 // --- Collision Detection & Handling ---
 
+// game.js - 修改checkCollisions函数
 function checkCollisions() {
-    // Simplified since we assume only 2 players
     if (players.length < 2) return;
-    const [p1, p2] = players;
 
+    const [p1, p2] = players;
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
-    const distanceSquared = dx * dx + dy * dy; // Use squared distance for efficiency
-    const minDistance = p1.radius + p2.radius;
-    const minDistanceSquared = minDistance * minDistance;
+    const distSq = dx * dx + dy * dy;
+    const minDist = p1.radius + p2.radius;
 
-    // Proceed only if they are actually overlapping
-    if (distanceSquared < minDistanceSquared) {
-        // Scenario 1: P1 dashes into stationary P2
-        if (p1.isDashing && !p2.isDashing) {
-            console.log(`Collision: Player ${p1.id} dashed into Player ${p2.id}`);
-            // P2 takes damage and knockback from P1's position
-            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
-            // Stop P1's dash immediately upon hitting
-            p1._endDash();
-        }
-        // Scenario 2: P2 dashes into stationary P1
-        else if (p2.isDashing && !p1.isDashing) {
-            console.log(`Collision: Player ${p2.id} dashed into Player ${p1.id}`);
-            // P1 takes damage and knockback from P2's position
-            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
-            // Stop P2's dash immediately upon hitting
-            p2._endDash();
-        }
-        // Scenario 3: Head-on collision (both dashing)
-        else if (p1.isDashing && p2.isDashing) {
-            console.log("Head-on collision!");
+    if (distSq >= minDist * minDist) return;
 
-            // Both take damage from the other, knockback originates from opponent's center
-            // We pass the *opponent's* coordinates as the source for knockback direction
-            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
-            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
-
-            // Both dashes are stopped immediately after collision resolution
-            // Use _endDash carefully here as it checks for buffered input, which might not be desired in head-on?
-            // For now, let's just stop them directly. Revisit if buffering feels wrong.
-            p1.isDashing = false; p1.dashVelX = 0; p1.dashVelY = 0; p1.dashDamage = 0;
-            p2.isDashing = false; p2.dashVelX = 0; p2.dashVelY = 0; p2.dashDamage = 0;
-
-            // Check for game over immediately *after* both damages are applied
-            // (Handles cases where both die simultaneously -> Draw)
-            if (p1.hp <= 0 && p2.hp <= 0) {
-                endGame(null); // Draw
-            } else if (p1.hp <= 0) {
-                endGame(p2); // P2 wins
-            } else if (p2.hp <= 0) {
-                endGame(p1); // P1 wins
-            }
-        }
-        // Note: If neither is dashing, they can harmlessly overlap (or push slightly if physics were added)
+    // 本地模式下直接处理，网络模式下通过服务器验证
+    if (!isRemoteMode) {
+        handleCollision(p1, p2);
+    } else if (network.playerId === 1) { // 仅由P1主机发送碰撞事件
+        network.send('collision', {});
     }
+}
+
+// 新增统一碰撞处理
+function handleCollision(p1, p2) {
+    const bothDashing = p1.isDashing && p2.isDashing;
+    const p1Dashing = p1.isDashing && !p2.isDashing;
+    const p2Dashing = !p1.isDashing && p2.isDashing;
+
+    if (bothDashing) {
+        p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+        p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+
+        if (network.playerId === p1.id) {
+            network.broadcastDamage(p1, p2.dashDamage, p2.x, p2.y, 1);
+            network.broadcastDamage(p2, p1.dashDamage, p1.x, p1.y, 1);
+        }
+
+        stopDash(p1);
+        stopDash(p2);
+        resolveDeath(p1, p2);
+    } else if (p1Dashing) {
+        p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+        if (network.playerId === p1.id) {
+            network.broadcastDamage(p2, p1.dashDamage, p1.x, p1.y, 1);
+        }
+        p1._endDash();
+    } else if (p2Dashing) {
+        p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+        if (network.playerId === p2.id) {
+            network.broadcastDamage(p1, p2.dashDamage, p2.x, p2.y, 1);
+        }
+        p2._endDash();
+    }
+}
+
+function stopDash(player) {
+    player.isDashing = false;
+    player.dashVelX = player.dashVelY = 0;
+    player.dashDamage = 0;
+}
+
+function resolveDeath(p1, p2) {
+    if (p1.hp <= 0 && p2.hp <= 0) endGame(null);
+    else if (p1.hp <= 0) endGame(p2);
+    else if (p2.hp <= 0) endGame(p1);
 }
 
 
@@ -964,10 +973,6 @@ function updateTimers(elapsedMs) {
         else if (p2.hp > p1.hp) endGame(p2);
         else endGame(null); // Draw if HP is equal
     }
-}
-
-function updatePlayers() {
-    players.forEach(player => player.update());
 }
 
 function applyZoneDamage() {
@@ -1257,24 +1262,6 @@ function checkBothReady() {
     }
 }
 
-function setupReadyButtons() {
-    ui.p1.readyBtn.addEventListener('click', () => {
-        p1Ready = !p1Ready; // Toggle ready state
-        ui.p1.readyBtn.textContent = p1Ready ? 'Cancel Ready' : 'Player 1 Ready';
-        ui.p1.readyStatus.textContent = p1Ready ? 'Ready!' : 'Not Ready';
-        ui.p1.readyStatus.style.color = p1Ready ? 'lightgreen' : 'orange';
-        checkBothReady(); // Check if game should start
-    });
-
-    ui.p2.readyBtn.addEventListener('click', () => {
-        p2Ready = !p2Ready; // Toggle ready state
-        ui.p2.readyBtn.textContent = p2Ready ? 'Cancel Ready' : 'Player 2 Ready';
-        ui.p2.readyStatus.textContent = p2Ready ? 'Ready!' : 'Not Ready';
-        ui.p2.readyStatus.style.color = p2Ready ? 'lightgreen' : 'orange';
-        checkBothReady(); // Check if game should start
-    });
-}
-
 function hideGameOverScreen() {
     // 使用我们之前定义的 ui 引用来获取元素
     if (ui.gameOver) {
@@ -1427,3 +1414,206 @@ function main() {
 
 // Run the main setup function when the script loads
 main();
+
+// ============================
+// Websocket
+// ============================
+/* --- NetworkAdapter Setup --- */
+
+const isRemoteMode = true; // toggle this to false for local play
+
+class NetworkAdapter {
+    constructor() {
+        this.playerId = null;
+        this.state = {};
+        this.readyStates = {};
+        if (isRemoteMode) {
+            this.setupWebSocket();
+        }
+    }
+
+    setupWebSocket() {
+        this.ws = new WebSocket('ws://localhost:8080');
+        this.ws.onopen = () => console.log('Connected to server');
+        this.ws.onmessage = (msg) => this.handleMessage(JSON.parse(msg.data));
+    }
+
+    handleMessage({ type, data }) {
+        switch (type) {
+            case 'joined':
+                this.playerId = data.playerId;
+                break;
+            case 'ready_update':
+                this.readyStates = data.readyStatus;
+                p1Ready = !!this.readyStates[1];
+                p2Ready = !!this.readyStates[2];
+                updateReadyUI();
+                break;
+            case 'game_start':
+                checkBothReady();
+                break;
+            case 'collision':
+                handleCollision(players[0], players[1]);
+                break;
+            case 'charge_release':
+                if (players.length === 2 && data.playerId !== this.playerId) {
+                    const opponent = players.find(p => p.id !== this.playerId);
+                    opponent.angle = data.angle;
+                    opponent.chargePower = data.chargePower;
+                    opponent.dashDamage = data.dashDamage;
+
+                    const dashSpeed = config.dash.baseSpeed * opponent.chargePower;
+                    const dashAngle = opponent.angle + Math.PI;
+                    opponent.dashVelX = Math.cos(dashAngle) * dashSpeed;
+                    opponent.dashVelY = Math.sin(dashAngle) * dashSpeed;
+                    opponent.isDashing = true;
+                    opponent.updateChargeIndicator(0);
+                }
+                break;
+            case 'sync':
+                Object.entries(data).forEach(([pid, state]) => {
+                    const p = players[pid - 1];
+                    if (!p) return;
+                    p.x = state.x;
+                    p.y = state.y;
+                    p.angle = state.angle;
+                    // 不要用 Object.assign，避免把 hp 覆盖
+                });
+                break;
+            case 'hp_update':
+                const p = players[data.targetId - 1];
+                if (p) {
+                    p.hp = data.hp;
+                    p.updateHpIndicator();
+                    // p.takeDamage(data.amount, data.fromX, data.fromY, data.knockbackMult || 1);
+                    p.triggerHitEffect();
+
+                }
+                break;
+        }
+    }
+
+    send(type, data) {
+        if (!isRemoteMode) return;
+        if (this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type, data }));
+        }
+    }
+
+    setReady(isReady) {
+        if (!isRemoteMode) {
+            if (this.playerId === 1) p1Ready = isReady;
+            if (this.playerId === 2) p2Ready = isReady;
+            updateReadyUI();
+            checkBothReady();
+            return;
+        }
+        this.send('ready', { isReady });
+    }
+
+    updateState(player) {
+        const state = {
+            x: player.x,
+            y: player.y,
+            angle: player.angle,
+            // hp: player.hp,
+        };
+        this.send('state', state);
+    }
+
+    broadcastChargeRelease(player) {
+        this.send('charge_release', {
+            playerId: player.id,
+            angle: player.angle,
+            chargePower: player.chargePower,
+            dashDamage: player.dashDamage
+        });
+    }
+
+    broadcastDamage(target, amount, fromX, fromY, knockbackMult) {
+        this.send('damage', {
+            targetId: target.id,
+            amount,
+            fromX,
+            fromY,
+            knockbackMult // 新增击退系数
+        });
+    }
+}
+
+const network = new NetworkAdapter();
+
+/* --- Override Ready Buttons --- */
+
+function updateReadyUI() {
+    ui.p1.readyStatus.textContent = p1Ready ? 'Ready!' : 'Not Ready';
+    ui.p1.readyStatus.style.color = p1Ready ? 'lightgreen' : 'orange';
+    ui.p2.readyStatus.textContent = p2Ready ? 'Ready!' : 'Not Ready';
+    ui.p2.readyStatus.style.color = p2Ready ? 'lightgreen' : 'orange';
+    ui.p1.readyBtn.textContent = p1Ready ? 'Cancel Ready' : 'Player 1 Ready';
+    ui.p2.readyBtn.textContent = p2Ready ? 'Cancel Ready' : 'Player 2 Ready';
+}
+
+function setupReadyButtons() {
+    ui.p1.readyBtn.addEventListener('click', () => {
+        p1Ready = !p1Ready;
+        network.setReady(p1Ready);
+        updateReadyUI();
+    });
+
+    ui.p2.readyBtn.addEventListener('click', () => {
+        p2Ready = !p2Ready;
+        network.setReady(p2Ready);
+        updateReadyUI();
+    });
+}
+
+/* --- Sync inside game loop --- */
+
+function updatePlayers() {
+    players.forEach(player => {
+        player.update();
+        if (player.id === network.playerId) {
+            network.updateState(player);
+        }
+    });
+}
+
+/* --- Hook into charge release --- */
+
+Robot.prototype.releaseCharge = function () {
+    if (this.isCharging) {
+        this.isCharging = false;
+        const chargeDuration = Math.min(Date.now() - this.chargeStartTime, config.charge.maxChargeTime);
+        const chargeRatio = chargeDuration / config.charge.maxChargeTime;
+        this.chargePower = config.charge.minPower + (config.charge.maxPower - config.charge.minPower) * Math.sqrt(chargeRatio);
+        const dashSpeed = config.dash.baseSpeed * this.chargePower;
+        this.dashDamage = config.charge.minDamage + (config.charge.maxDamage - config.charge.minDamage) * chargeRatio;
+        const dashAngle = this.angle + Math.PI;
+        this.dashVelX = Math.cos(dashAngle) * dashSpeed;
+        this.dashVelY = Math.sin(dashAngle) * dashSpeed;
+        this.isDashing = true;
+        this.updateChargeIndicator(0);
+        if (this.id === network.playerId) {
+            network.broadcastChargeRelease(this);
+        }
+    }
+};
+
+/* --- Hook into damage --- */
+
+// const originalTakeDamage = Robot.prototype.takeDamage;
+// Robot.prototype.takeDamage = function (damage, fromX, fromY, knockbackMult = 1) {
+//     if (this.hp <= 0) return;
+//
+//     originalTakeDamage.call(this, damage, fromX, fromY, knockbackMult);
+//
+//     // 🔁 确保每次都更新 UI
+//     this.updateHpIndicator();
+//
+//     // 新增击退参数同步
+//     if (this.id === network.playerId) {
+//         network.broadcastDamage(this, damage, fromX, fromY, knockbackMult);
+//     }
+//
+// };
