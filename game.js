@@ -84,7 +84,7 @@ const config = {
     friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
     zone: {
         totalGameTime: 100000, // ms, total duration of a match
-        shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
+        shrinkStartTime: 30000, // ms, when the safe zone starts shrinking
         shrinkDuration: 8000, // ms, how long the shrinking process takes
         minRadius: 100, // Smallest radius the safe zone will reach
         damagePerTickOutside: (10 / FRAMES_PER_SECOND), // <--- CORRECTED CALCULATION

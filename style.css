@@ -36,8 +36,8 @@ canvas {
 }
 
 #ui {
-    height: 760px;
-    width: 1280px;
+    width: 1000px;
+    height: 600px;
     position: absolute;
     display: flex;
     justify-content: center;
@@ -54,12 +54,20 @@ canvas {
     width: 100%;
     display: flex;
     justify-content: space-between;
-    background-color: rgba(0, 0, 0, 0.5);
     border-radius: 5px;
 }
 
 #player1-info, #player2-info {
     padding: 5px 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#player1-info {
+    border-bottom-right-radius: 10px;
+}
+
+#player2-info {
+    border-bottom-left-radius: 10px;
 }
 
 .charge-indicator {
