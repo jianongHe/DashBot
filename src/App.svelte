@@ -29,7 +29,7 @@
     const config = {
         robot: {
             radius: 20,
-            maxHp: 300,
+            maxHp: 2,
             pointerLength: 30,
             angleSpeed: 0.03 * FRAMES_PER_SECOND, // Radians per frame (how fast the pointer spins)
             angleSpeedFast: 0.05 * FRAMES_PER_SECOND,
@@ -198,6 +198,8 @@
     let ui = {};
 
     let showMenu = true;
+    let showGameOver = false;
+    let winMessage = '';
 
     class NetworkAdapter {
         constructor() {
@@ -1452,12 +1454,8 @@
     }
 
     function hideGameOverScreen() {
-        // 使用我们之前定义的 ui 引用来获取元素
-        if (ui.gameOver) {
-            ui.gameOver.style.display = 'none';
-        }
-
-        showReadyBox()
+        showGameOver = false;
+        showMenu = true;
     }
 
     function hideReadyBox() {
@@ -1476,7 +1474,7 @@
         gameOver = false;
         winner = null;
         particles = []; // Clear particles from previous game
-        ui.gameOver.style.display = 'none'; // Hide game over screen
+        showGameOver = false;
         hideReadyBox()
 
         // Reset safe zone
@@ -1522,12 +1520,12 @@
         // Log result and update UI message
         if (winner) {
             console.log(`Game Over! Player ${winner.id} wins!`);
-            ui.winnerMessage.textContent = `Player ${winner.id} (${winner.color}) wins!`;
+            winMessage = `Player ${winner.id} (${winner.color}) wins!`;
         } else {
             console.log("Game Over! It's a draw!");
-            ui.winnerMessage.textContent = `It's a Draw!`;
+            winMessage = `It's a Draw!`;
         }
-        ui.gameOver.style.display = 'block'; // Show game over screen
+        showGameOver = true;
 
         // Stop any ongoing player actions (like charging)
         players.forEach(p => {
@@ -1734,13 +1732,13 @@
             <div class="player-info">
                 <div id="player1-info">
                     <div>
-                        Player 1 (Mouse): <span id="p1-hp">{ config.robot.maxHp }</span> HP
+                        P1 (Keyboard 'A'): <span id="p1-hp">{ config.robot.maxHp }</span> HP
                         <div id="p1-charge" class="charge-indicator"></div>
                     </div>
                 </div>
                 <div id="player2-info">
                     <div>
-                        Player 2 (Keyboard 'L'): <span id="p2-hp">{ config.robot.maxHp }</span> HP
+                        P2 (Keyboard 'L'): <span id="p2-hp">{ config.robot.maxHp }</span> HP
                         <div id="p2-charge" class="charge-indicator"></div>
                     </div>
                 </div>
@@ -1832,11 +1830,14 @@
                 </div>
             {/if}
         </div>
-        <div id="game-over" class="game-over-screen">
-            <h2>Game Over!</h2>
-            <p id="winner-message"></p>
-            <button onclick={hideGameOverScreen}>Ok</button>
-        </div>
+        {#if showGameOver}
+            <div id="game-over" class="game-over-screen">
+                <h2>Game Over!</h2>
+                <p id="winner-message">{winMessage}</p>
+                <button onclick={hideGameOverScreen}>Ok</button>
+            </div>
+        {/if}
+
         <canvas bind:this={canvas} id="gameCanvas" width="1000" height="600"></canvas>
     </div>
 </main>
@@ -1923,7 +1924,6 @@
     }
 
     .game-over-screen {
-        display: none;
         position: absolute;
         top: 50%;
         left: 50%;
@@ -1934,6 +1934,7 @@
         border-radius: 10px;
         text-align: center;
         color: white;
+        z-index: 5;
     }
 
     .game-over-screen h2 {
