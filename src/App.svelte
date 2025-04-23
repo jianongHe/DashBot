@@ -2,6 +2,7 @@
     import {onMount} from 'svelte'
 
     let canvas;
+    let ctx;
 
     /**
      * @fileoverview Main script for a 2-player physics-based arena game.
@@ -9,7 +10,7 @@
      * while a safe zone shrinks.
      */
 
-        // Load UFO image resources
+    // Load UFO image resources
     const redUfoImage = new Image();
     redUfoImage.src = 'assets/red_ufo.png';
     const blueUfoImage = new Image();
@@ -21,7 +22,7 @@
     const KNOCKBACK_DURATION_FRAMES = 20; // How many frames knockback effect lasts
     let lastPosSync = 0, lastAngleSync = 0, lastChargeSync = 0;
     let lastFrameTime = performance.now();
-    let isRemoteMode = true; // toggle this to false for local play
+    let isRemoteMode = false; // toggle this to false for local play
 
     // --- Game Configuration ---
     // Centralized settings for game balance and mechanics
@@ -195,6 +196,8 @@
     let lastRadiantLightningTime = 0; // 放在全局定义
 
     let ui = {};
+
+    let showMenu = true;
 
     class NetworkAdapter {
         constructor() {
@@ -1350,7 +1353,7 @@
             // Fade out particle based on remaining life
             ctx.globalAlpha = Math.max(0, p.life / (config.particle.baseLife + config.particle.randomLifeBoost)); // Fade based on max possible life
             ctx.fillStyle = 'saddlebrown'; // Poop color
-            ctx.fillText('💩', 0, 0); // Draw emoji at the rotated origin
+            ctx.fillText('x', 0, 0); // Draw emoji at the rotated origin
             ctx.restore(); // Restore context state (alpha, translation, rotation)
         });
     }
@@ -1367,10 +1370,10 @@
         // but in complex apps, use removeEventListener)
 
         // --- Player 1: Mouse Controls ---
-        canvas.addEventListener('mousedown', handleMouseDown);
-        canvas.addEventListener('mouseup', handleMouseUp);
-        canvas.addEventListener('contextmenu', preventContextMenu);
-        canvas.addEventListener('mouseleave', handleMouseLeave); // Handle case where mouse leaves canvas while button is down
+        // canvas.addEventListener('mousedown', handleMouseDown);
+        // canvas.addEventListener('mouseup', handleMouseUp);
+        // canvas.addEventListener('contextmenu', preventContextMenu);
+        // canvas.addEventListener('mouseleave', handleMouseLeave); // Handle case where mouse leaves canvas while button is down
 
         // --- Player 2: Keyboard Controls ---
         window.addEventListener('keydown', handleKeyDown);
@@ -1413,6 +1416,11 @@
             players[1].isControlDown = true;
             players[1].startCharge(); // Attempt to start charge
         }
+        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
+            // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
+            players[0].isControlDown = true;
+            players[0].startCharge(); // Attempt to start charge
+        }
     }
 
     function handleKeyUp(event) {
@@ -1422,6 +1430,15 @@
             if (players[1].isControlDown) {
                 players[1].isControlDown = false;
                 players[1].releaseCharge(); // Attempt to release charge
+            }
+        }
+
+        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
+            // Check if game is running, P2 exists, key matches P2's control
+            // Only release charge if the control was actually tracked as 'down' for P2
+            if (players[0].isControlDown) {
+                players[0].isControlDown = false;
+                players[0].releaseCharge(); // Attempt to release charge
             }
         }
     }
@@ -1444,8 +1461,7 @@
     }
 
     function hideReadyBox() {
-        ui.readyContainer.style.display = 'none';
-        ui.ui.style.pointerEvents = 'none';
+        showMenu = false;
     }
 
     function showReadyBox() {
@@ -1470,7 +1486,7 @@
         // Create player robots
         const padding = 100; // Initial distance from edge
         players = [
-            new Robot(padding, canvas.height / 2, 'red', 1),
+            new Robot(padding, canvas.height / 2, 'red', 1, 'a'),
             new Robot(canvas.width - padding, canvas.height / 2, 'blue', 2, 'l') // P2 uses 'l' key
         ];
 
@@ -1655,7 +1671,7 @@
     onMount(() => {
 
         // --- Canvas & Rendering Context ---
-        const ctx = canvas.getContext('2d');
+        ctx = canvas.getContext('2d');
         // --- Helper Functions --- (可以放在文件顶部或 Robot 类外部)
 
 
@@ -1689,6 +1705,16 @@
         main();
 
     })
+
+    const markP1Ready = () => {
+        p1Ready = !p1Ready;
+        checkBothReady();
+    }
+
+    const markP2Ready = () => {
+        p2Ready = !p2Ready;
+        checkBothReady();
+    }
 
 </script>
 
@@ -1736,73 +1762,75 @@
             <!--            </div>-->
             <!--        </div>-->
 
-            <div id="menu" class="menu">
-                <div class="tab">
-                    <button class="tab-item" onclick={() => isRemoteMode = true}>
-                        {#if isRemoteMode}
-                            <div class="selected"></div>
-                        {/if}
-                        <span>Online</span>
-                        <div class="online-status-pointer"></div>
-                    </button>
-                    <button class="tab-item" onclick={() => isRemoteMode = false}>
-                        {#if !isRemoteMode}
-                            <div class="selected"></div>
-                        {/if}
-                        <span>Local</span>
-                    </button>
+            {#if showMenu}
+                <div id="menu" class="menu">
+                    <div class="tab">
+                        <button class="tab-item" onclick={() => isRemoteMode = false}>
+                            {#if !isRemoteMode}
+                                <div class="selected"></div>
+                            {/if}
+                            <span>Local</span>
+                        </button>
+                        <button class="tab-item" onclick={() => isRemoteMode = true}>
+                            {#if isRemoteMode}
+                                <div class="selected"></div>
+                            {/if}
+                            <span>Online</span>
+                            <div class="online-status-pointer"></div>
+                        </button>
+                    </div>
+
+                    {#if isRemoteMode}
+                        <div class="online-menu">
+                            <div class="counter">
+                                <div class="people-count">people: 1000</div>
+                                <div class="rooms-count">rooms: 200</div>
+                            </div>
+                            <div class="rooms">
+                                <div class="room">room1</div>
+                                <div class="room">room2</div>
+                                <div class="room">room3</div>
+                                <div class="room">room4</div>
+                            </div>
+                            <div class="start-match">Start match</div>
+                        </div>
+                    {:else}
+                        <div class="local-menu">
+                            <div class="score-pair">
+                                <div class="score">3</div>
+                                <div class="symbol">:</div>
+                                <div class="score">1</div>
+                            </div>
+
+                            <div class="ready-box">
+                                <div class="ready-section">
+                                    <div class="info">
+                                        <div class="name">P1</div>
+                                        {#if p1Ready}
+                                            <div class="ready-status">ready✅</div>
+                                        {:else}
+                                            <div class="ready-status">not ready</div>
+                                        {/if}
+                                    </div>
+                                    <button class="key" class:ready={p1Ready} onclick={markP1Ready}>A</button>
+                                </div>
+                                <div class="ready-section">
+                                    <div class="info">
+                                        <div class="name">P2</div>
+                                        {#if p2Ready}
+                                            <div class="ready-status">ready✅</div>
+                                        {:else}
+                                            <div class="ready-status">not ready</div>
+                                        {/if}
+                                    </div>
+                                    <button class="key" class:ready={p2Ready} onclick={markP2Ready}>L</button>
+                                </div>
+                            </div>
+                        </div>
+                    {/if}
+
                 </div>
-
-                {#if isRemoteMode}
-                    <div class="online-menu">
-                        <div class="counter">
-                            <div class="people-count">people: 1000</div>
-                            <div class="rooms-count">rooms: 200</div>
-                        </div>
-                        <div class="rooms">
-                            <div class="room">room1</div>
-                            <div class="room">room2</div>
-                            <div class="room">room3</div>
-                            <div class="room">room4</div>
-                        </div>
-                        <div class="start-match">Start match</div>
-                    </div>
-                {:else}
-                    <div class="local-menu">
-                        <div class="score-pair">
-                            <div class="score">3</div>
-                            <div class="symbol">:</div>
-                            <div class="score">1</div>
-                        </div>
-
-                        <div class="ready-box">
-                            <div class="ready-section">
-                                <div class="info">
-                                    <div class="name">P1</div>
-                                    {#if p1Ready}
-                                        <div class="ready-status">ready✅</div>
-                                    {:else}
-                                        <div class="ready-status">not ready</div>
-                                    {/if}
-                                </div>
-                                <button class="key" class:ready={p1Ready} onclick={() => p1Ready = !p1Ready}>A</button>
-                            </div>
-                            <div class="ready-section">
-                                <div class="info">
-                                    <div class="name">P2</div>
-                                    {#if p2Ready}
-                                        <div class="ready-status">ready✅</div>
-                                    {:else}
-                                        <div class="ready-status">not ready</div>
-                                    {/if}
-                                </div>
-                                <div class="key" class:ready={p2Ready} onclick={() => p2Ready = !p2Ready}>L</div>
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
-            </div>
+            {/if}
         </div>
         <div id="game-over" class="game-over-screen">
             <h2>Game Over!</h2>
