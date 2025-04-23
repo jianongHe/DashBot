@@ -2237,6 +2237,10 @@
         background-color: rgba(192, 139, 227, 0.41);
     }
 
+    .menu .local-menu .ready-box .ready-section .key.ready:hover {
+        background-color: rgba(98, 238, 161, 0.78);
+    }
+
     .menu .local-menu .ready-box .ready-section .info .check {
         display: flex;
     }
