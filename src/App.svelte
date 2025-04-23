@@ -29,7 +29,7 @@
     const config = {
         robot: {
             radius: 20,
-            maxHp: 2,
+            maxHp: 100,
             pointerLength: 30,
             angleSpeed: 0.03 * FRAMES_PER_SECOND, // Radians per frame (how fast the pointer spins)
             angleSpeedFast: 0.05 * FRAMES_PER_SECOND,
@@ -853,6 +853,7 @@
     function handleCollision(p1, p2) {
         const p1Dashing = p1.isDashing && !p2.isDashing;
         const p2Dashing = !p1.isDashing && p2.isDashing;
+        const bothDashing = p1.isDashing && p2.isDashing;
 
         if (!isRemoteMode) {
             if (p1Dashing) {
@@ -870,6 +871,20 @@
                 p2.targetY = p2.y;
                 p2.targetAngle = p2.angle;
 
+                p2._endDash();
+            }else if (bothDashing) {
+                // —— 双方互相伤害 ——
+                p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+                p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+
+                p1.targetX = p1.x;
+                p1.targetY = p1.y;
+                p1.targetAngle = p1.angle;
+                p2.targetX = p2.x;
+                p2.targetY = p2.y;
+                p2.targetAngle = p2.angle;
+
+                p1._endDash();
                 p2._endDash();
             }
             return;
@@ -897,6 +912,24 @@
             }
             p2._endDash();
             // p2.skipSyncFrames = 3;
+        } else if (bothDashing) {
+            p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+
+            p1.targetX = p1.x;
+            p1.targetY = p1.y;
+            p1.targetAngle = p1.angle;
+            p2.targetX = p2.x;
+            p2.targetY = p2.y;
+            p2.targetAngle = p2.angle;
+
+            if (network.playerId === 1) {
+                network.broadcastDamage(p1, p2.dashDamage, p2.x, p2.y, 1);
+                network.broadcastDamage(p2, p1.dashDamage, p1.x, p1.y, 1);
+            }
+
+            p1._endDash();
+            p2._endDash();
         }
     }
 
