@@ -1766,7 +1766,7 @@
     </div>
 
     <div id="game-container">
-        <div id="ui" class:prevent-pointer={gameStartTime}>
+        <div id="ui" class:prevent-pointer={gameStartTime && !gameOver}>
             <div class="player-info">
                 <div id="player1-info">
                     <div>
