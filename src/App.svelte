@@ -207,9 +207,7 @@
             this.roomId = null;
             this.state = {};
             this.readyStates = {};
-            if (isRemoteMode) {
-                this.setupWebSocket();
-            }
+            this.setupWebSocket();
         }
 
         setupWebSocket() {
@@ -225,6 +223,7 @@
             switch (type) {
                 case 'joined':
                     this.playerId = data.playerId;
+                    this.roomId = data.roomId;
                     console.log("network.roomId =", network.roomId);
                     console.log("network.playerId =", network.playerId);
                     break;
