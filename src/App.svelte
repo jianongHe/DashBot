@@ -1405,10 +1405,10 @@
         // but in complex apps, use removeEventListener)
 
         // --- Player 1: Mouse Controls ---
-        // canvas.addEventListener('mousedown', handleMouseDown);
-        // canvas.addEventListener('mouseup', handleMouseUp);
-        // canvas.addEventListener('contextmenu', preventContextMenu);
-        // canvas.addEventListener('mouseleave', handleMouseLeave); // Handle case where mouse leaves canvas while button is down
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('contextmenu', preventContextMenu);
+        canvas.addEventListener('mouseleave', handleMouseLeave); // Handle case where mouse leaves canvas while button is down
 
         // --- Player 2: Keyboard Controls ---
         window.addEventListener('keydown', handleKeyDown);
@@ -1419,6 +1419,10 @@
         if (event.button === 0 && !gameOver && players[0]) { // Left mouse button, game running, P1 exists
             players[0].isControlDown = true;
             players[0].startCharge(); // Attempt to start charge
+        }
+        if (event.button === 1 && !gameOver && players[1]) { // Left mouse button, game running, P1 exists
+            players[1].isControlDown = true;
+            players[1].startCharge(); // Attempt to start charge
         }
     }
 
@@ -1762,7 +1766,7 @@
     </div>
 
     <div id="game-container">
-        <div id="ui">
+        <div id="ui" class:prevent-pointer={gameStartTime}>
             <div class="player-info">
                 <div id="player1-info">
                     <div>
@@ -1924,6 +1928,10 @@
         color: white;
         font-size: 1.1em;
         z-index: 5;
+    }
+
+    #ui.prevent-pointer {
+        pointer-events: none;
     }
 
     .player-info {
