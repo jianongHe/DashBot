@@ -200,6 +200,7 @@
     let showMenu = true;
     let showGameOver = false;
     let winMessage = '';
+    let localScore = {}
 
     class NetworkAdapter {
         constructor() {
@@ -1551,7 +1552,8 @@
 
         // Log result and update UI message
         if (winner) {
-            console.log(`Game Over! Player ${winner.id} wins!`);
+            localScore[winner.id] = (localScore[winner.id] || 0) + 1
+            console.log(`Game Over! Player ${winner.id} wins!`, winner.id, localScore);
             winMessage = `Player ${winner.id} (${winner.color}) wins!`;
         } else {
             console.log("Game Over! It's a draw!");
@@ -1827,9 +1829,9 @@
                     {:else}
                         <div class="local-menu">
                             <div class="score-pair">
-                                <div class="score">3</div>
+                                <div class="score">{localScore[1] || 0}</div>
                                 <div class="symbol">:</div>
-                                <div class="score">1</div>
+                                <div class="score">{localScore[2] || 0}</div>
                             </div>
 
                             <div class="ready-box">
