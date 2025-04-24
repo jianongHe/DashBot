@@ -2006,7 +2006,7 @@
         z-index: -1;
     }
 
-    .star {
+    :global(.star) {
         position: absolute;
         background: white;
         border-radius: 50%;
@@ -2080,7 +2080,7 @@
 
     #star-background {
         pointer-events: none;
-        z-index: -1;
+        z-index: 1;
         position: absolute;
         top: 0;
         left: 0;
