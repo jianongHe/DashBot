@@ -80,6 +80,13 @@ class Room {
         // 3. 正式开始游戏
         this.broadcast('game_start', {});
         this.isPlaying = true;
+
+        // 90秒后结束游戏
+        setTimeout(() => {
+            if (this.isPlaying) {
+                this.endGame(); // 没有 winner，平局或超时结束
+            }
+        }, 90000); // 90秒
     }
 
     broadcast(type, data) {

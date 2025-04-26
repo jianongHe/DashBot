@@ -13,7 +13,7 @@
      * while a safe zone shrinks.
      */
 
-    // const assetDomain = 'https://assets.dashbot.jianong.me'
+        // const assetDomain = 'https://assets.dashbot.jianong.me'
     const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
@@ -96,7 +96,7 @@
         friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
         zone: {
             totalGameTime: 90000, // ms, total duration of a match
-            shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
+            shrinkStartTime: 30000, // ms, when the safe zone starts shrinking
             shrinkDuration: 8000, // ms, how long the shrinking process takes
             minRadius: 100, // Smallest radius the safe zone will reach
             damagePerTickOutside: 10, // <--- CORRECTED CALCULATION
@@ -383,6 +383,7 @@
                 knockbackMult // 新增击退系数
             });
         }
+
         broadcastZoneDamage(target, amount) {
             this.send('zone_damage', {
                 targetId: target.id,
@@ -921,7 +922,7 @@
                 p2.targetAngle = p2.angle;
 
                 p2._endDash();
-            }else if (bothDashing) {
+            } else if (bothDashing) {
                 // —— 双方互相伤害 ——
                 p1.takeDamage(p2.dashDamage, p2.x, p2.y);
                 p2.takeDamage(p1.dashDamage, p1.x, p1.y);
@@ -1237,20 +1238,20 @@
         // Update main game timer
         const remainingTime = Math.max(0, config.zone.totalGameTime - elapsedMs);
         const secondsLeft = Math.ceil(remainingTime / MS_PER_SECOND);
-        ui.timer.textContent = `Time Left: ${secondsLeft}s`;
+        // ui.timer.textContent = `Time Left: ${secondsLeft}s`;
         ShrinkingLeft = secondsLeft
 
         // Update shrink countdown timer
         const shrinkRemaining = Math.max(0, config.zone.shrinkStartTime - elapsedMs);
         if (shrinkRemaining > 0) {
             const shrinkSeconds = Math.ceil(shrinkRemaining / MS_PER_SECOND);
-            ui.shrinkTimer.textContent = `Shrink In: ${shrinkSeconds}s`;
+            // ui.shrinkTimer.textContent = `Shrink In: ${shrinkSeconds}s`;
             ShrinkingState = 'safe'
         } else if (elapsedMs < config.zone.shrinkStartTime + config.zone.shrinkDuration) {
-            ui.shrinkTimer.textContent = 'Shrinking...';
+            // ui.shrinkTimer.textContent = 'Shrinking...';
             ShrinkingState = 'shrinking'
         } else {
-            ui.shrinkTimer.textContent = 'Zone Closed!';
+            // ui.shrinkTimer.textContent = 'Zone Closed!';
             ShrinkingState = 'closed'
         }
 
@@ -1331,8 +1332,8 @@
         // ③ 描边发光
         const pulse = 0.3 + 0.2 * Math.sin(t * vis.glow.pulseSpeed);
         const gradient = ctx.createRadialGradient(cx, cy, r - 10, cx, cy, r);
-        gradient.addColorStop(0, `rgba(255,255,255,${pulse * vis.glow.innerAlpha})`);
-        gradient.addColorStop(1, `rgb(134, 44, 140, ${pulse * vis.glow.outerAlpha})`);
+        gradient.addColorStop(0, `rgba(255,0,0,${pulse * vis.glow.innerAlpha})`);
+        gradient.addColorStop(1, `rgb(140, 44, 47, ${pulse * vis.glow.outerAlpha})`);
         ctx.strokeStyle = gradient;
         ctx.lineWidth = vis.glow.baseWidth + vis.glow.pulseRange * pulse;
         ctx.beginPath();
@@ -1451,7 +1452,7 @@
     const codeChars = [
         'alibaba', 'OSS', 'Redis', 'ACR', 'ECS',
 
-        '01010101', '0', '1', 'nil', 'error', 'warining','def', 'shit', 'fuck',
+        '01010101', '0', '1', 'nil', 'error', 'warining', 'def', 'shit', 'fuck', 'fuck you',
         'if', 'else', 'for', 'while', 'return', '=>', '==', '===', 'defer',
         'queue', 'devops', 'async', 'await', 'try', 'catch', 'import', 'export',
         'switch', 'case', 'class', 'enum', 'map', 'list', 'set', 'array', 'dict',
@@ -1568,7 +1569,7 @@
 
     function handleKeyDown(event) {
         if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
-            if(roomInfo.id && network.playerId !== 2) {
+            if (roomInfo.id && network.playerId !== 2) {
                 return;
             }
 
@@ -1576,8 +1577,8 @@
             players[1].isControlDown = true;
             players[1].startCharge(); // Attempt to start charge
         }
-        if (network.playerId === 1 && !gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
-            if(roomInfo.id && network.playerId !== 1) {
+        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
+            if (roomInfo.id && network.playerId !== 1) {
                 return;
             }
             // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
@@ -1588,7 +1589,7 @@
 
     function handleKeyUp(event) {
         if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
-            if(roomInfo.id && network.playerId !== 2) {
+            if (roomInfo.id && network.playerId !== 2) {
                 return;
             }
             // Check if game is running, P2 exists, key matches P2's control
@@ -1600,7 +1601,7 @@
         }
 
         if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
-            if(roomInfo.id && network.playerId !== 1) {
+            if (roomInfo.id && network.playerId !== 1) {
                 return;
             }
             // Check if game is running, P2 exists, key matches P2's control
@@ -1624,6 +1625,7 @@
     }
 
     function hideGameOverScreen() {
+        console.log('hide game over')
         showGameOver = false;
         showMenu = true;
     }
@@ -1664,8 +1666,8 @@
             p.updateHpIndicator();
             p.updateChargeIndicator(0);
         });
-        ui.timer.textContent = `Time Left: ${Math.ceil(config.zone.totalGameTime / MS_PER_SECOND)}s`;
-        ui.shrinkTimer.textContent = `Shrink In: ${Math.ceil(config.zone.shrinkStartTime / MS_PER_SECOND)}s`;
+        // ui.timer.textContent = `Time Left: ${Math.ceil(config.zone.totalGameTime / MS_PER_SECOND)}s`;
+        // ui.shrinkTimer.textContent = `Shrink In: ${Math.ceil(config.zone.shrinkStartTime / MS_PER_SECOND)}s`;
 
 
         // Cancel any previous game loop
@@ -1818,7 +1820,6 @@
 
     /* --- Sync inside game loop --- */
 
-
     function updatePlayers(dt) {
         const now = Date.now();
         players.forEach(p => {
@@ -1859,7 +1860,6 @@
         // --- Helper Functions --- (可以放在文件顶部或 Robot 类外部)
 
 
-
         // --- UI Element References ---
         // Getting references to HTML elements for UI updates
         ui = {
@@ -1891,7 +1891,7 @@
     })
 
     const markP1Ready = () => {
-        if(!!roomInfo.id && network.playerId !== 1) {
+        if (!!roomInfo.id && network.playerId !== 1) {
             return
         }
         p1Ready = !p1Ready;
@@ -1900,7 +1900,7 @@
     }
 
     const markP2Ready = () => {
-        if(!!roomInfo.id && network.playerId !== 2) {
+        if (!!roomInfo.id && network.playerId !== 2) {
             return
         }
         p2Ready = !p2Ready;
@@ -1932,16 +1932,30 @@
               <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             </span>
     </h1>
-    <p class="text-lg md:text-xl text-gray-400 flex items-center justify-center">
+    <p class="text-lg md:text-xl text-gray-400 flex items-center justify-center mt-3">
         <span class="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
         1v1 Space Robot Sprint Battle
         <span class="inline-block w-1.5 h-1.5 bg-green-500 rounded-full ml-2"></span>
     </p>
 
-    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
-        <div id="timer" class="timer-box">Time Left:</div>
-        <div id="shrink-timer" class="timer-box shrink">Shrink In:</div>
+    <div class="flex justify-center my-6">
+        <div class="text-center max-w-2xl relative p-4">
+            <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-purple-500"></div>
+            <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-purple-500"></div>
+            <div class="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-purple-500"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-purple-500"></div>
+
+            <div class="mx-1">
+                <p class="font-bold text-yellow-400"> Press "A" or "L" to dash!</p>
+                <p>Time your shots, predict your opponent's moves, and be the last bot standing!</p>
+            </div>
+        </div>
     </div>
+
+<!--    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">-->
+<!--        <div id="timer" class="timer-box">Time Left:</div>-->
+<!--        <div id="shrink-timer" class="timer-box shrink">Shrink In:</div>-->
+<!--    </div>-->
 
     <div class="flex justify-between items-center mb-2 px-2 bg-black/30 border border-purple-800/30 rounded relative">
         <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
@@ -1958,7 +1972,8 @@
                 {/if}
             </div>
             {#if roomInfo.id}
-                <div class="bg-purple-900/50 px-2 py-1 rounded text-sm border border-purple-800/50">{roomInfo.id}XXX</div>
+                <div class="bg-purple-900/50 px-2 py-1 rounded text-sm border border-purple-800/50">{roomInfo.id}XXX
+                </div>
             {/if}
         </div>
 
@@ -1974,14 +1989,14 @@
             </div>
 
             <div class="bg-black/40 px-2 py-1 rounded text-sm border border-gray-800/50 flex items-center gap-1">
-<!--                <ZapIcon class="h-3 w-3 text-yellow-500" />-->
-                <Icon icon="ph:lightning" width="16" height="16" class="text-yellow-400" />
+                <!--                <ZapIcon class="h-3 w-3 text-yellow-500" />-->
+                <Icon icon="ph:lightning" width="16" height="16" class="text-yellow-400"/>
                 <div class="text-yellow-400">{formattedTime}</div>
             </div>
 
             <div class="px-2 py-1 rounded cursor-pointer text-sm border border-red-800/50 flex items-center gap-1 hover:bg-red-900/50 pointer transform scale-x-[-1]">
-<!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
-                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24" />
+                <!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
+                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24"/>
             </div>
         </div>
     </div>
@@ -2006,7 +2021,7 @@
                         <div>&nbsp;HP</div>
 
                     </div>
-                    <ChargeBar chargeLevel={p1ChargeRate / 100} totalSegments={30} color="purple" />
+                    <ChargeBar chargeLevel={p1ChargeRate / 100} totalSegments={30} color="purple"/>
                 </div>
 
                 <div id="player2-info" class="flex flex-col items-end gap-1 text-green-500">
@@ -2021,7 +2036,7 @@
 
 
                     </div>
-                    <ChargeBar chargeLevel={p2ChargeRate / 100} totalSegments={30} color="green" reverse />
+                    <ChargeBar chargeLevel={p2ChargeRate / 100} totalSegments={30} color="green" reverse/>
                 </div>
             </div>
 
@@ -2082,7 +2097,9 @@
                         <buoon class="exit" onclick={exitRoom}>Exit room</buoon>
                     </div>
                     <div class="local-menu">
-                        <ReadyBox p1Score={roomInfo.score[1] || 0} p2Score={roomInfo.score[2] || 0} p1Ready={p1Ready} p2Ready={p2Ready} markP1Ready={markP1Ready} markP2Ready={markP2Ready} isOnline={!!roomInfo.id} current={network.playerId}></ReadyBox>
+                        <ReadyBox p1Score={roomInfo.score[1] || 0} p2Score={roomInfo.score[2] || 0} p1Ready={p1Ready}
+                                  p2Ready={p2Ready} markP1Ready={markP1Ready} markP2Ready={markP2Ready}
+                                  isOnline={!!roomInfo.id} current={network.playerId}></ReadyBox>
                     </div>
                 </div>
             {/if}
@@ -2090,10 +2107,33 @@
 
         </div>
         {#if showGameOver}
-            <div id="game-over" class="game-over-screen">
-                <h2>Game Over!</h2>
-                <p id="winner-message">{winMessage}</p>
-                <button onclick={hideGameOverScreen}>Ok</button>
+            <div id="game-over" class="absolute inset-0 z-5 flex flex-col items-center justify-center ">
+                <div class="relative p-8 border-2 border-purple-800/70 rounded-lg bg-black/80 max-w-md w-full">
+                    <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-purple-500"></div>
+                    <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-green-500"></div>
+                    <div class="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-purple-500"></div>
+                    <div class="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-green-500"></div>
+
+                    <div class="absolute -top-6 left-1/2 transform -translate-x-1/2">
+                        <!--                    <RobotIcon class="h-12 w-12 text-yellow-400" />-->
+                    </div>
+
+                    <h2 class="text-4xl font-bold mb-4 text-yellow-400 text-center">GAME OVER</h2>
+                    <p class="text-2xl mb-6 text-center flex items-center justify-center">
+                        <!--                    <RobotIcon className={`h-6 w-6 mr-2 ${winner === 0 ? "text-purple-500" : "text-green-400"}`} />-->
+                        <Icon icon="material-symbols:robot-2-outline-rounded" width="32" height="32"/>
+
+                        Player 1 Wins!
+                    </p>
+
+                    <div class="flex gap-4 justify-center">
+                        <div class="border-green-800 text-green-400 hover:bg-green-900/50 p-2 rounded relative overflow-hidden">
+                            <button onclick={hideGameOverScreen}>
+                                Play Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         {/if}
 
