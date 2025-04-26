@@ -1,11 +1,10 @@
-import { WebSocketServer } from 'ws';
+const WebSocket = require('ws');
 
 const PORT = 8080;
 const TICK_RATE = 1000 / 60;
 
-const wss = new WebSocketServer({ port: PORT, path: '/ws' });
+const wss = new WebSocket.Server({ port: PORT, path: '/ws' });
 console.log(`Server running on ws://localhost:${PORT}/ws`);
-
 
 const rooms = new Map(); // roomId -> Room
 const lobby = new Set(); // 存放处于大厅的 ws
