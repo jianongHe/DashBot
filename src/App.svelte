@@ -195,6 +195,7 @@
     let safeZoneRadius; // Current radius of the safe zone
     let safeZoneCenter; // Center coordinates {x, y} of the safe zone
     let gameStartTime; // Timestamp when the current game started
+    let gameStartTimeNormal; // Timestamp when the current game started
     let p1Ready = false; // Player 1 ready status
     let p2Ready = false; // Player 2 ready status
 
@@ -1370,14 +1371,29 @@
             ctx.stroke();
         }
 
-        // ⑥ 顶部提示
-        if (elapsedMs < shrinkStart) {
+        const now = Date.now();
+        const elapsedMsForHud = now - gameStartTimeNormal;
+
+        const shrinkStartTimeHud = config.zone.shrinkStartTime;
+        const shrinkEndTimeHud = shrinkStartTimeHud + config.zone.shrinkDuration;
+
+        const showHudBeforeShrinkMs = 10000; // 缩圈前 10 秒提示
+
+        const timeUntilShrinkStartsHud = shrinkStartTimeHud - elapsedMsForHud;
+
+        const isBeforeShrinkHud = timeUntilShrinkStartsHud > showHudBeforeShrinkMs;
+        const isShrinkSoonHud = timeUntilShrinkStartsHud <= showHudBeforeShrinkMs && timeUntilShrinkStartsHud > 0;
+        const isShrinkingHud = elapsedMsForHud >= shrinkStartTimeHud && elapsedMsForHud < shrinkEndTimeHud;
+        const isShrinkClosedHud = elapsedMsForHud >= shrinkEndTimeHud;
+
+// ⑥ 顶部提示（完全隔离逻辑）
+        if (isShrinkSoonHud) {
             const {text, color} = vis.hudText.shrinkSoon;
             drawHudText(text, canvas.width / 2, 70, color);
-        } else if (elapsedMs < shrinkEnd) {
+        } else if (isShrinkingHud) {
             const {text, color} = vis.hudText.shrinking;
             drawHudText(text, canvas.width / 2, 70, color);
-        } else {
+        } else if (isShrinkClosedHud) {
             const {text, color} = vis.hudText.closed;
             drawHudText(text, canvas.width / 2, 70, color);
         }
@@ -1678,6 +1694,7 @@
 
         setupInputListeners(); // Make sure input listeners are active for the new game
         gameStartTime = performance.now();
+        gameStartTimeNormal = Date.now();
         lastFrameTime = performance.now();
         requestAnimationFrame(gameLoop);
     }
@@ -1939,7 +1956,7 @@
     </p>
 
     <div class="flex justify-center my-6">
-        <div class="text-center max-w-2xl relative p-4">
+        <div class="text-center max-w-2xl relative px-4 py-2">
             <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-purple-500"></div>
             <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-purple-500"></div>
             <div class="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-purple-500"></div>
@@ -2060,16 +2077,16 @@
 
                     {#if isRemoteMode}
                         <div class="online-menu">
-                            <div class="counter">
+                            <div class="counter" style="height: 275px;">
                                 <div class="people-count">people: {lobbyCount}</div>
                                 <div class="rooms-count">rooms: {roomCount}</div>
                             </div>
-                            <div class="rooms">
-                                <div class="room">room1</div>
-                                <div class="room">room2</div>
-                                <div class="room">room3</div>
-                                <div class="room">room4</div>
-                            </div>
+<!--                            <div class="rooms">-->
+<!--                                <div class="room">room1</div>-->
+<!--                                <div class="room">room2</div>-->
+<!--                                <div class="room">room3</div>-->
+<!--                                <div class="room">room4</div>-->
+<!--                            </div>-->
                             <button class="start-match" onclick={startMatch}>Start match</button>
                         </div>
                     {:else}
