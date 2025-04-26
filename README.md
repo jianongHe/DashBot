@@ -67,6 +67,9 @@
 
 - 前端使用vite+svelte搭建页面UI和客户端游戏逻辑
 - 服务端使用nodejs+websocket同步,存储,和广播游戏状态
+- 使用Aliyun Redis存储房间和队列状态
+- 使用阿里云镜像服务构建docker镜像并部署
+- caddy来作为代理服务
 
 - WebSocket 实现实时通信
 - 阿里云 OSS 托管前端 & 资源

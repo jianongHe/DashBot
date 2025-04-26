@@ -1,0 +1,4 @@
+dashbot.jianong.me {
+    root * /usr/share/caddy
+    file_server
+}
