@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:18-alpine AS build
 WORKDIR /app
 COPY . .
 RUN npm install && npm run build
@@ -8,16 +8,19 @@ FROM caddy:alpine
 # 静态资源
 COPY --from=build /app/dist /usr/share/caddy
 
-# server.js 相关
+# server 代码和依赖
 COPY ./server /app/server
 
 # Caddy 配置
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# 安装 Node
-RUN apk add --no-cache nodejs
+# 安装 Node & npm
+RUN apk add --no-cache nodejs npm
+
+# 安装 server 依赖
+WORKDIR /app/server
+RUN npm install --production
 
 EXPOSE 80 443
 
-# 启动 Node 服务 和 Caddy
 CMD node /app/server/server.js & caddy run --config /etc/caddy/Caddyfile
