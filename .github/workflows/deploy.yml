@@ -1,0 +1,40 @@
+name: Build, Push, and Deploy
+
+on:
+  push:
+    branches:
+      - dash-bot-production
+
+jobs:
+  call-build:
+    uses: ./.github/workflows/docker-build.yml
+
+  build-push-deploy:
+    needs: call-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest .
+          docker push ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest
+
+      - name: SSH into server and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /Code/DashBot
+            git checkout dash-bot-production
+            git pull origin dash-bot-production
+            docker login -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }} ${{ secrets.ACR_REGISTRY }}
+            docker-compose pull
+            docker-compose up -d

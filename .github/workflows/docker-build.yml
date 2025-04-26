@@ -1,9 +1,7 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - dash-bot-production
+  workflow_call:
 
 jobs:
   build-and-push:
