@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy
+name: Build Frontend, Push Server, Deploy
 
 on:
   push:
@@ -6,19 +6,57 @@ on:
       - dash-bot-production
 
 jobs:
-  call-build:
-    uses: ./.github/workflows/docker-build.yml
-    secrets:
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-      ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
-      ACR_REPO: ${{ secrets.ACR_REPO }}
-
-  build-push-deploy:
-    needs: call-build
+  build-frontend-upload-oss:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
+      - name: Install dependencies and build frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload to OSS
+        uses: fangbinwei/aliyun-oss-website-action@v1
+        with:
+          accessKeyId: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          accessKeySecret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          bucket: ${{ secrets.OSS_BUCKET }}
+          endpoint: ${{ secrets.OSS_ENDPOINT }}
+          folder: dist
+
+      - name: Install Aliyun CLI
+        run: |
+          curl -sL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz | tar -xz
+          sudo mv aliyun /usr/local/bin/
+
+      - name: Configure Aliyun CLI
+        run: |
+              aliyun configure set --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }} --region               aliyun configure set --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }} --region ap-southeast-1
+
+      - name: Refresh CDN Cache
+        run: |
+          aliyun cdn RefreshObjectCaches --ObjectPath "https://assets.dashbot.jianong.me/*" --ObjectType Directory
+
+
+  build-server-push-acr:
+    runs-on: ubuntu-latest
+    needs: build-frontend-upload-oss
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and Push Server Docker Image
+        run: |
+          docker build -t ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest -f Dockerfile.server .
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+          docker push ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest
+
+  deploy-server:
+    runs-on: ubuntu-latest
+    needs: build-server-push-acr
+    steps:
       - name: SSH into server and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:

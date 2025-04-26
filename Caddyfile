@@ -1,4 +1,6 @@
 dashbot.jianong.me {
     root * /usr/share/caddy
     file_server
+
+    reverse_proxy /ws* 127.0.0.1:8080
 }
