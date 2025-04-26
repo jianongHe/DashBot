@@ -1478,12 +1478,19 @@
     }
 
     function handleKeyDown(event) {
-        if (network.playerId === 2 && !gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
+        if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
+            if(roomInfo.id && network.playerId !== 2) {
+                return;
+            }
+
             // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
             players[1].isControlDown = true;
             players[1].startCharge(); // Attempt to start charge
         }
         if (network.playerId === 1 && !gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
+            if(roomInfo.id && network.playerId !== 1) {
+                return;
+            }
             // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
             players[0].isControlDown = true;
             players[0].startCharge(); // Attempt to start charge
@@ -1491,7 +1498,10 @@
     }
 
     function handleKeyUp(event) {
-        if (network.playerId === 2 &&!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
+        if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
+            if(roomInfo.id && network.playerId !== 2) {
+                return;
+            }
             // Check if game is running, P2 exists, key matches P2's control
             // Only release charge if the control was actually tracked as 'down' for P2
             if (players[1].isControlDown) {
@@ -1500,7 +1510,10 @@
             }
         }
 
-        if (network.playerId === 1 &&!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
+        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
+            if(roomInfo.id && network.playerId !== 1) {
+                return;
+            }
             // Check if game is running, P2 exists, key matches P2's control
             // Only release charge if the control was actually tracked as 'down' for P2
             if (players[0].isControlDown) {
