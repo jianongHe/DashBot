@@ -1,6 +1,7 @@
 <script>
     import {onMount} from 'svelte'
     import ReadyBox from "./lib/ReadyBox.svelte";
+    import ChargeBar from "./lib/ChargeBar.svelte";
 
     let canvas;
     let ctx;
@@ -11,11 +12,13 @@
      * while a safe zone shrinks.
      */
 
+    // const assetDomain = 'https://assets.dashbot.jianong.me'
+    const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
-    redUfoImage.src = 'https://assets.dashbot.jianong.me/assets/red_ufo.png';
+    redUfoImage.src = assetDomain + '/assets/red_ufo.png';
     const blueUfoImage = new Image();
-    blueUfoImage.src = 'https://assets.dashbot.jianong.me/assets/blue_ufo.png';
+    blueUfoImage.src = assetDomain + '/assets/blue_ufo.png';
 
     // --- Constants ---
     const MS_PER_SECOND = 1000;
@@ -24,6 +27,7 @@
     let lastPosSync = 0, lastAngleSync = 0, lastChargeSync = 0;
     let lastFrameTime = performance.now();
     let isRemoteMode = false; // toggle this to false for local play
+    let isHighRefreshRate = false;
 
     // --- Game Configuration ---
     // Centralized settings for game balance and mechanics
@@ -63,12 +67,12 @@
                 },
                 color: {
                     red: {
-                        baseColor: 'rgba(204,72,72,0.87)', // 竖条的基础颜色
-                        highlightColor: 'rgb(238,126,126)' // 指针方向竖条的高亮颜色
+                        baseColor: 'rgba(255,0,255,0.62)', // 竖条的基础颜色
+                        highlightColor: 'rgba(255,0,255,0.62)' // 指针方向竖条的高亮颜色
                     },
                     blue: {
-                        baseColor: 'rgba(101,150,183,0.87)', // 竖条的基础颜色
-                        highlightColor: 'rgb(145,179,220)' // 指针方向竖条的高亮颜色
+                        baseColor: 'rgba(0,255,0,0.71)', // 竖条的基础颜色
+                        highlightColor: 'rgba(0,255,0,0.71)' // 指针方向竖条的高亮颜色
                     }
                 }
             },
@@ -94,10 +98,10 @@
             minRadius: 100, // Smallest radius the safe zone will reach
             damagePerTickOutside: 10, // <--- CORRECTED CALCULATION
             visual: {
-                outerMaskColor: 'rgba(50,0,42,0.5)',
+                outerMaskColor: 'rgba(50,0,4,0.5)',
                 grid: {
                     spacing: 20,
-                    color: 'rgba(221,0,255,0.08)',
+                    color: 'rgba(255,0,0,0.08)',
                     lineWidth: 1,
                 },
                 glow: {
@@ -127,7 +131,7 @@
                 },
                 lightning: {
                     enabled: false,
-                    color: 'rgba(180,0,255,0.4)',
+                    color: 'rgba(255,0,0,0.4)',
                     count: 3,           // 每帧画几道闪电
                     segments: 20,       // 每道闪电多少段
                     wiggle: 12,         // 最大扰动幅度
@@ -135,7 +139,7 @@
                 },
                 outerLightning: {
                     enabled: false,
-                    color: 'rgba(180,0,255,0.3)',
+                    color: 'rgba(255,0,0,0,0.3)',
                     lineWidth: 2,
                     count: 1,
                     maxSegments: 10,
@@ -149,7 +153,7 @@
                     segmentLength: 30,         // 每段闪电的长度
                     forkChance: 0.3,           // 每段有概率分叉
                     maxForkDepth: 2,           // 最多生成一次子闪电
-                    color: 'rgba(180,0,255,ALPHA)', // 注意这里用 ALPHA 占位符
+                    color: 'rgba(255,255,255,ALPHA)', // 注意这里用 ALPHA 占位符
                     lineWidth: 1.5,
                     lifespan: 1600,
                     lineWidthStart: 1.5,
@@ -166,7 +170,7 @@
         },
         particle: {
             maxCount: 300, // Max number of poop particles
-            baseLife: 25, // Base frames a particle lives
+            baseLife: 50, // Base frames a particle lives
             randomLifeBoost: 20, // Max additional random frames
             baseSize: 15, // Base particle size
             randomSizeBoost: 15, // Max additional random size
@@ -414,6 +418,7 @@
             this.hitEffectCooldown = 100; // 冷却时间（毫秒），可调整
             this.isKnockback = false;
             this.skipSyncFrames = 0;    // 新增：跳过插值的帧数
+            this.chargeRatio = 0;    // 新增：跳过插值的帧数
         }
 
         // --- Actions ---
@@ -657,6 +662,7 @@
                 particles.push({
                     x: spawnX,
                     y: spawnY,
+                    text: getRandomCodeChar(),
                     size: config.particle.baseSize + Math.random() * config.particle.randomSizeBoost + spawnDist * config.particle.distanceSizeFactor,
                     rotation: Math.random() * Math.PI * 2,
                     // Particle velocity is a fraction of the robot's speed in the particle's direction
@@ -692,10 +698,7 @@
         // --- UI Updates ---
 
         updateChargeIndicator(percentage) {
-            const chargeBar = (this.id === 1) ? ui.p1.charge : ui.p2.charge;
-            if (chargeBar) {
-                chargeBar.style.width = `${percentage}%`;
-            }
+            this.chargeRatio = percentage
         }
 
         updateHpIndicator() {
@@ -973,6 +976,23 @@
     }
 
 
+    function detectRefreshRate(callback) {
+        let frames = 0;
+        let start = performance.now();
+
+        function measure(now) {
+            frames++;
+            if (now - start < 500) {
+                requestAnimationFrame(measure);
+            } else {
+                const fps = (frames / (now - start)) * 1000;
+                callback(fps);
+            }
+        }
+
+        requestAnimationFrame(measure);
+    }
+
     // --- Game Loop ---
 
     function gameLoop(timestamp) {
@@ -981,7 +1001,7 @@
 
         const frameDuration = 1000 / FRAMES_PER_SECOND;
         const delta = timestamp - lastFrameTime;
-        if (delta < frameDuration) return requestAnimationFrame(gameLoop);
+        if (isHighRefreshRate && delta < frameDuration) return requestAnimationFrame(gameLoop);
 
         const dt = delta / 1000;
         lastFrameTime = timestamp;
@@ -1073,7 +1093,7 @@
     function drawRadiantLightning() {
         const now = Date.now();
         const cfg = config.zone.visual.radiantLightning;
-        const stages = radiantBolts.useExtraFlash ? cfg.alphaStages : [
+        const stages = radiantBolts?.useExtraFlash ? cfg.alphaStages : [
             {t: 0.0, alpha: 1.0},
             {t: 1.0, alpha: 0.0}
         ];
@@ -1405,6 +1425,52 @@
         ctx.restore();
     }
 
+    const codeChars = [
+        'alibaba', 'OSS', 'Redis', 'ACR', 'ECS',
+
+        '01010101', '0', '1', 'nil', 'error', 'warining','def', 'shit', 'fuck',
+        'if', 'else', 'for', 'while', 'return', '=>', '==', '===', 'defer',
+        'queue', 'devops', 'async', 'await', 'try', 'catch', 'import', 'export',
+        'switch', 'case', 'class', 'enum', 'map', 'list', 'set', 'array', 'dict',
+        'tuple', 'hook', 'JWT', '404', 'panic', 'k8s', 'docker', 'S3', 'VPC', 'todo',
+        'hax', 'bug', 'lol', 'wtf', 'sudo', 'NaN', 'undefined', '=>',
+        '0101', 'null', 'let', 'const', 'var', '&&', '||', 'func', '()', '[]',
+        '#', '>', '<', '+', '-', '*', '/', '%', '!!true', '!!false',
+        'PR', 'WIP', 'PTAL', 'TBR', 'TL;DR', 'LGTM', 'AFAIK', 'CC', 'nerd', 'geek',
+        'YOLO', 'sudo !!', 'chmod 777', 'kill -9', 'ps aux', 'ls -la',
+        'cd ..', 'cd /', 'make', 'make clean', 'touch', 'mv', 'cp', 'tar -xzvf',
+        'ssh root@', 'exit 1', '0xDEADBEEF', 'segfault', 'core dumped',
+
+        'git', 'CI/CD', 'localhost', '127.0.0.1', 'exit', 'kill', 'rm -rf',
+        'ping', 'curl', 'grep', 'chmod', 'root', 'admin', 'pwned',
+        'heap', 'stack', 'overflow', 'base64', 'md5', 'sha256', 'token',
+        'auth', '.env', 'ERR', 'boot', 'reboot', 'exec',
+        'socket', 'cors', 'cache', 'ttl', 'dns', 'async/await', 'yield',
+        'bind', 'apply', 'call', 'loser', 'throttle', 'debounce', 'fork',
+        'node_modules', 'hot', 'reload', 'dev', 'prod', 'test',
+        'mock', 'stub', 'spy', 'assert', 'jest',
+        'webpack', 'vite', 'tsconfig', 'jwt', 'csrf', 'xss', 'sqlinjection',
+        'promise', 'reject', 'cloud', 'cdn', 'proxy',
+
+        '0xBADF00D', '0xC0FFEE', '0xFEEDFACE', 'hello world', 'bye world',
+        'killall', 'panic!!', 'why', 'pls', 'rekt', 'GG', 'nope', 'boom', 'pwn',
+        'die()', 'sleep(9999)', 'while(true)', 'matrix', 'ctrl+c', 'ctrl+z',
+
+        'undefined != NaN', 'true == false', 'ಠ_ಠ', '💩', '🐛', '🔥', '🚀',
+
+        'Stuxnet', 'HelloWorld', 'Linux', 'GNU', 'BSD', 'TCP/IP', 'RFC 2616', 'RFC 2324',
+        'fail whale', 'slashdot', 'diggnation', 'IE6', 'Musk', 'Satoshi',
+
+        '(ಥ﹏ಥ)', '(¬_¬)', '(ಠ_ಠ)',
+        '(；一_一)', '(≧▽≦)', '(๑•̀ㅂ•́)و✧', '(｡•́‿•̀｡)', 'ψ(｀∇´)ψ', '(ﾉ´ヮ`)ﾉ*: ･ﾟ',
+        '( •̀ ω •́ )✧', '(눈_눈)', '｡ﾟ(ﾟ´Д｀)ﾟ｡', 'ಥ_ಥ', '(ʘ‿ʘ)', 'ʕ•ᴥ•ʔ', '(=￣ω￣=)',
+        'ლ(╹◡╹ლ)', '(ง •̀_•́)ง', '(•‿•)', '(｡♥‿♥｡)', '^ ^'
+    ];
+
+    function getRandomCodeChar() {
+        return codeChars[Math.floor(Math.random() * codeChars.length)];
+    }
+
     function drawParticles() {
         particles.forEach(p => {
             ctx.save(); // Save current context state
@@ -1415,8 +1481,8 @@
             ctx.textBaseline = 'middle';
             // Fade out particle based on remaining life
             ctx.globalAlpha = Math.max(0, p.life / (config.particle.baseLife + config.particle.randomLifeBoost)); // Fade based on max possible life
-            ctx.fillStyle = 'saddlebrown'; // Poop color
-            ctx.fillText('x', 0, 0); // Draw emoji at the rotated origin
+            ctx.fillStyle = '#00FFFF'; // Poop color
+            ctx.fillText(p.text, 0, 0);
             ctx.restore(); // Restore context state (alpha, translation, rotation)
         });
     }
@@ -1678,6 +1744,15 @@
 
     // --- Initialization ---
     function main() {
+        detectRefreshRate((fps) => {
+            console.log(`Detected FPS: ${fps.toFixed(1)}`);
+            if (fps > 70) { // 高刷 > 60，留点余地
+                isHighRefreshRate = true;
+                // 特殊逻辑
+                console.log('High refresh rate detected!');
+            }
+        });
+
         console.log("Game script loaded. Setting up.");
         setupStarfield(); // Initialize background
         setupReadyButtons(); // Set up the ready system listeners
@@ -1820,33 +1895,93 @@
         roomInfo = {}
     }
 
+    const poisonActive = true;
+
 </script>
 
 <main>
 
     <div id="star-background"></div>
 
-    <h1>DashBot</h1>
+    <h1 class="text-5xl md:text-7xl font-bold mb-2 text-purple-600 tracking-tight relative">
+            <span class="relative">
+              DASH<span class="text-green-400">BOT</span>
+              <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </span>
+    </h1>
+    <p class="text-lg md:text-xl text-gray-400 flex items-center justify-center">
+        <span class="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
+        1v1 Space Robot Sprint Battle
+        <span class="inline-block w-1.5 h-1.5 bg-green-500 rounded-full ml-2"></span>
+    </p>
 
     <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
         <div id="timer" class="timer-box">Time Left:</div>
         <div id="shrink-timer" class="timer-box shrink">Shrink In:</div>
     </div>
 
+    <div class="flex justify-between items-center mb-2 px-2 bg-black/30 border border-purple-800/30 rounded relative">
+        <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
+        <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
+        <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
+        <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-purple-500"></div>
+
+        <div class="flex items-center gap-2 py-1">
+            <div class="text-sm font-bold text-purple-500 flex items-center">
+                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
+                ROOM:
+            </div>
+            <div class="bg-purple-900/50 px-2 py-1 rounded text-sm border border-purple-800/50">{roomInfo.id}XXX</div>
+
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div class="hidden md:flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-gray-800/50">
+                <div class="text-xs text-gray-400">FPS:</div>
+                <div class="text-xs text-green-400">50</div>
+            </div>
+
+            <div class="hidden md:flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-gray-800/50">
+<!--                <WifiIcon class="h-3 w-3 text-gray-400" />-->
+                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
+
+                <div class="text-xs text-green-400">33ms</div>
+            </div>
+
+            <div
+                    class={`flex items-center gap-1 px-2 py-1 rounded border ${poisonActive ? "bg-green-900/20 border-green-800/50" : "bg-black/40 border-gray-800/50"}`}
+            >
+                <div class={`text-xs font-bold ${poisonActive ? "text-green-400" : "text-gray-400"}`}>
+                    {poisonActive ? "POISON ACTIVE" : "SAFE ZONE"}
+                </div>
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+            </div>
+
+            <div class="bg-black/40 px-2 py-1 rounded text-sm border border-gray-800/50 flex items-center gap-1">
+<!--                <ZapIcon class="h-3 w-3 text-yellow-500" />-->
+                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
+
+                <div class="text-yellow-400">00:00</div>
+            </div>
+
+            <div class="bg-red-900/30 px-2 py-1 rounded text-sm border border-red-800/50 flex items-center gap-1 animate-pulse">
+<!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
+                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
+            </div>
+        </div>
+    </div>
     <div id="game-container">
         <div id="ui" class:prevent-pointer={gameStartTime && !gameOver}>
-            <div class="player-info">
-                <div id="player1-info">
-                    <div>
-                        P1 (Keyboard 'A'): <span id="p1-hp">{ config.robot.maxHp }</span> HP
-                        <div id="p1-charge" class="charge-indicator"></div>
-                    </div>
+            <div class="player-info flex justify-between items-start">
+                <div id="player1-info" class="flex flex-col items-start gap-1">
+                    <div>P1 (A): <span id="p1-hp">{ config.robot.maxHp }</span> HP</div>
+                    {players[0]?.chargeRatio || 0}
+                    <ChargeBar chargeLevel={players[0]?.chargeRatio} totalSegments={20} color="purple" />
                 </div>
-                <div id="player2-info">
-                    <div>
-                        P2 (Keyboard 'L'): <span id="p2-hp">{ config.robot.maxHp }</span> HP
-                        <div id="p2-charge" class="charge-indicator"></div>
-                    </div>
+
+                <div id="player2-info" class="flex flex-col items-end gap-1">
+                    <div>P2 (L): <span id="p2-hp">{ config.robot.maxHp }</span> HP</div>
+                    <ChargeBar chargeLevel={players[1]?.chargeRatio} totalSegments={20} color="green" />
                 </div>
             </div>
 
@@ -1927,11 +2062,6 @@
 </main>
 
 <style>
-    * {
-        padding: 0;
-        margin: 0;
-    }
-
     body {
         display: flex;
         flex-direction: column; /* Stack title and game vertically */
@@ -1942,11 +2072,6 @@
         background-color: #1a1a2e; /* Dark space blue */
         color: #e0e0e0; /* Light text */
         font-family: sans-serif;
-    }
-
-    h1 {
-        color: rgb(25, 104, 194); /* Yellowish title */
-        margin-bottom: 10px;
     }
 
     #game-container {
@@ -2086,10 +2211,6 @@
         color: white;
     }
 
-    h1, .game-title {
-        text-shadow: 0 0 4px #0095ff;
-    }
-
     :global(button) {
         background-color: rgba(255, 255, 255, 0.08);
         color: white;
@@ -2128,7 +2249,7 @@
         position: absolute;
         display: flex;
         flex-direction: column;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(16, 16, 37, 0.5);
         border: 1px dashed rgba(168, 168, 168, 0.5);
     }
 
