@@ -33,7 +33,11 @@ jobs:
 
       - name: Configure Aliyun CLI
         run: |
-              aliyun configure set --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }} --region               aliyun configure set --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }} --region ap-southeast-1
+          aliyun configure set \
+          --mode AK \
+          --region ap-southeast-1 \
+          --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} \
+          --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }}
 
       - name: Refresh CDN Cache
         run: |
