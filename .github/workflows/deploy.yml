@@ -8,6 +8,11 @@ on:
 jobs:
   call-build:
     uses: ./.github/workflows/docker-build.yml
+    secrets:
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      ACR_REPO: ${{ secrets.ACR_REPO }}
 
   build-push-deploy:
     needs: call-build
