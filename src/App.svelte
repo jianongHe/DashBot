@@ -13,9 +13,9 @@
 
     // Load UFO image resources
     const redUfoImage = new Image();
-    redUfoImage.src = 'assets/red_ufo.png';
+    redUfoImage.src = 'https://assets.dashbot.jianong.me/assets/red_ufo.png';
     const blueUfoImage = new Image();
-    blueUfoImage.src = 'assets/blue_ufo.png';
+    blueUfoImage.src = 'https://assets.dashbot.jianong.me/assets/blue_ufo.png';
 
     // --- Constants ---
     const MS_PER_SECOND = 1000;
