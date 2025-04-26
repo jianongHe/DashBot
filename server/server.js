@@ -30,7 +30,7 @@ class Room {
         this.players.set(playerId, conn);
         this.states[playerId] = {};
         this.readyStatus[playerId] = false;
-//帮我用tailwindcss把这个换成一个充能条，是那种斜的很多线段的那种充能条，当蓄力时这个充能条的格子被颜色填满，左侧紫色，右侧绿色
+
         conn.send('joined', { roomId: this.id, playerId });
         this.broadcast('room_update', this.getRoomInfo());
         return conn;

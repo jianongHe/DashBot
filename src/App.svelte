@@ -2,6 +2,7 @@
     import {onMount} from 'svelte'
     import ReadyBox from "./lib/ReadyBox.svelte";
     import ChargeBar from "./lib/ChargeBar.svelte";
+    import Icon from '@iconify/svelte';
 
     let canvas;
     let ctx;
@@ -94,7 +95,7 @@
         },
         friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
         zone: {
-            totalGameTime: 100000, // ms, total duration of a match
+            totalGameTime: 90000, // ms, total duration of a match
             shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
             shrinkDuration: 8000, // ms, how long the shrinking process takes
             minRadius: 100, // Smallest radius the safe zone will reach
@@ -116,14 +117,14 @@
                 edgeParticles: {
                     count: 20,
                     radius: 2,
-                    color: 'rgba(248,180,255,0.6)',
+                    color: 'rgba(225,37,37,0.6)',
                     rotationSpeedNormal: 0.0001,   // ← 缩圈前/后速度
                     rotationSpeedFast: 0.0012,    // ← 缩圈中速度
                 },
                 shockwave: {
                     duration: 1000,
                     maxRadiusBoost: 30,
-                    color: 'rgb(221,100,255, ALPHA)',
+                    color: 'rgb(152,19,19, ALPHA)',
                     lineWidth: 5,
                 },
                 hudText: {
@@ -212,6 +213,16 @@
     let roomCount = 0
     let roomInfo = {}
     let isPlaying = false;
+    let ShrinkingState = 'safe'; //shrinking/closed
+    let ShrinkingLeft = 90; //shrinking/closed
+
+    $: formattedTime = formatTime(ShrinkingLeft);
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
 
     class NetworkAdapter {
         constructor() {
@@ -1227,16 +1238,20 @@
         const remainingTime = Math.max(0, config.zone.totalGameTime - elapsedMs);
         const secondsLeft = Math.ceil(remainingTime / MS_PER_SECOND);
         ui.timer.textContent = `Time Left: ${secondsLeft}s`;
+        ShrinkingLeft = secondsLeft
 
         // Update shrink countdown timer
         const shrinkRemaining = Math.max(0, config.zone.shrinkStartTime - elapsedMs);
         if (shrinkRemaining > 0) {
             const shrinkSeconds = Math.ceil(shrinkRemaining / MS_PER_SECOND);
             ui.shrinkTimer.textContent = `Shrink In: ${shrinkSeconds}s`;
+            ShrinkingState = 'safe'
         } else if (elapsedMs < config.zone.shrinkStartTime + config.zone.shrinkDuration) {
             ui.shrinkTimer.textContent = 'Shrinking...';
+            ShrinkingState = 'shrinking'
         } else {
             ui.shrinkTimer.textContent = 'Zone Closed!';
+            ShrinkingState = 'closed'
         }
 
 
@@ -1903,7 +1918,7 @@
         roomInfo = {}
     }
 
-    const poisonActive = true;
+    $: poisonActive = ShrinkingState !== 'safe';
 
 </script>
 
@@ -1936,25 +1951,18 @@
 
         <div class="flex items-center gap-2 py-1">
             <div class="text-sm font-bold text-purple-500 flex items-center">
-                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
-                ROOM:
+                {#if roomInfo.id}
+                    ROOM:
+                {:else}
+                    Local Mode
+                {/if}
             </div>
-            <div class="bg-purple-900/50 px-2 py-1 rounded text-sm border border-purple-800/50">{roomInfo.id}XXX</div>
-
+            {#if roomInfo.id}
+                <div class="bg-purple-900/50 px-2 py-1 rounded text-sm border border-purple-800/50">{roomInfo.id}XXX</div>
+            {/if}
         </div>
 
         <div class="flex items-center gap-3">
-            <div class="hidden md:flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-gray-800/50">
-                <div class="text-xs text-gray-400">FPS:</div>
-                <div class="text-xs text-green-400">50</div>
-            </div>
-
-            <div class="hidden md:flex items-center gap-1 bg-black/40 px-2 py-1 rounded border border-gray-800/50">
-<!--                <WifiIcon class="h-3 w-3 text-gray-400" />-->
-                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
-
-                <div class="text-xs text-green-400">33ms</div>
-            </div>
 
             <div
                     class={`flex items-center gap-1 px-2 py-1 rounded border ${poisonActive ? "bg-green-900/20 border-green-800/50" : "bg-black/40 border-gray-800/50"}`}
@@ -1967,27 +1975,52 @@
 
             <div class="bg-black/40 px-2 py-1 rounded text-sm border border-gray-800/50 flex items-center gap-1">
 <!--                <ZapIcon class="h-3 w-3 text-yellow-500" />-->
-                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
-
-                <div class="text-yellow-400">00:00</div>
+                <Icon icon="ph:lightning" width="16" height="16" class="text-yellow-400" />
+                <div class="text-yellow-400">{formattedTime}</div>
             </div>
 
-            <div class="bg-red-900/30 px-2 py-1 rounded text-sm border border-red-800/50 flex items-center gap-1 animate-pulse">
+            <div class="px-2 py-1 rounded cursor-pointer text-sm border border-red-800/50 flex items-center gap-1 hover:bg-red-900/50 pointer transform scale-x-[-1]">
 <!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
-                <img src="./assets/icons/RobotIcon.svg" class="h-4 w-4 mr-1">
+                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24" />
             </div>
         </div>
     </div>
     <div id="game-container">
+        <div class="absolute top-0 left-0 w-8 h-8 border-t border-l border-purple-500"></div>
+        <div class="absolute top-0 right-0 w-8 h-8 border-t border-r border-green-500"></div>
+        <div class="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-purple-500"></div>
+        <div class="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-green-500"></div>
+
+
         <div id="ui" class:prevent-pointer={gameStartTime && !gameOver}>
-            <div class="player-info flex justify-between items-start">
-                <div id="player1-info" class="flex flex-col items-start gap-1">
-                    <div>P1 (A): <span id="p1-hp">{ config.robot.maxHp }</span> HP</div>
+            <div class="player-info flex justify-between items-start ">
+                <div id="player1-info" class="flex flex-col items-start gap-1 text-purple-500">
+                    <div class="flex">
+
+                        <div class="bg-purple-900/50 flex mr-2 justify-center items-center px-2 rounded text-sm border border-purple-800/50">
+                            <Icon icon="material-symbols:robot-2-outline-rounded" width="24" height="24"/>
+                            P1
+                        </div>
+
+                        <div id="p1-hp">{ config.robot.maxHp }</div>
+                        <div>&nbsp;HP</div>
+
+                    </div>
                     <ChargeBar chargeLevel={p1ChargeRate / 100} totalSegments={30} color="purple" />
                 </div>
 
-                <div id="player2-info" class="flex flex-col items-end gap-1">
-                    <div>P2 (L): <span id="p2-hp">{ config.robot.maxHp }</span> HP</div>
+                <div id="player2-info" class="flex flex-col items-end gap-1 text-green-500">
+                    <div class="flex">
+                        <div id="p2-hp">{ config.robot.maxHp }</div>
+                        <div>&nbsp;HP</div>
+
+                        <div class="bg-green-900/50 flex ml-2 justify-center items-center px-2 rounded text-sm border border-green-800/50">
+                            P2
+                            <Icon icon="material-symbols:robot-2-outline-rounded" width="24" height="24"/>
+                        </div>
+
+
+                    </div>
                     <ChargeBar chargeLevel={p2ChargeRate / 100} totalSegments={30} color="green" reverse />
                 </div>
             </div>
