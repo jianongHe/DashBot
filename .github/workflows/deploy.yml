@@ -53,7 +53,7 @@ jobs:
 
       - name: Build and Push Server Docker Image
         run: |
-          docker build -t ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest -f Dockerfile.server .
+          docker build -t ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest -f Dockerfile .
           echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
           docker push ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPO }}:latest
 
