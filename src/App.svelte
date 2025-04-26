@@ -1,5 +1,6 @@
 <script>
     import {onMount} from 'svelte'
+    import ReadyBox from "./lib/ReadyBox.svelte";
 
     let canvas;
     let ctx;
@@ -88,7 +89,7 @@
         friction: 0.90, // Multiplier applied to dash velocity each frame (e.g., 0.9 means 10% speed loss)
         zone: {
             totalGameTime: 100000, // ms, total duration of a match
-            shrinkStartTime: 30000, // ms, when the safe zone starts shrinking
+            shrinkStartTime: 3000, // ms, when the safe zone starts shrinking
             shrinkDuration: 8000, // ms, how long the shrinking process takes
             minRadius: 100, // Smallest radius the safe zone will reach
             damagePerTickOutside: 10, // <--- CORRECTED CALCULATION
@@ -201,6 +202,10 @@
     let showGameOver = false;
     let winMessage = '';
     let localScore = {}
+    let lobbyCount = 0
+    let roomCount = 0
+    let roomInfo = {}
+    let isPlaying = false;
 
     class NetworkAdapter {
         constructor() {
@@ -234,8 +239,15 @@
                     p2Ready = !!this.readyStates[2];
                     break;
                 case 'game_start':
+                    initGame();
                     checkBothReady();
                     break;
+                case 'end_game':
+
+                    isPlaying = false;
+                    endGame(players.find(p => p.id === data.winner))
+                    break;
+
                 case 'collision':
                     handleCollision(players[0], players[1]);
                     break;
@@ -282,7 +294,7 @@
                         if (typeof state.isDashing === 'boolean') p.isDashing = state.isDashing;
                     });
                     break;
-                case 'hp_update': {
+                case 'hp_update':
                     const p = players[data.targetId - 1];
                     if (p) {
                         p.hp = data.hp;
@@ -292,9 +304,18 @@
                             // 不再在这里 applyKnockback，避免延迟的二次击退动画
                         }
                     }
-                }
                     break;
+                case 'lobby_info':
+                    lobbyCount = data.lobbyCount
+                    roomCount = data.roomCount
+                    break;
+                case 'room_update':
+                    roomInfo = data.room
+                    console.log('update roomInfor', data.room)
 
+                    p1Ready = !!roomInfo.readyStatus[1]
+                    p2Ready = !!roomInfo.readyStatus[2]
+                    break;
             }
         }
 
@@ -343,6 +364,12 @@
                 fromX,
                 fromY,
                 knockbackMult // 新增击退系数
+            });
+        }
+        broadcastZoneDamage(target, amount) {
+            this.send('zone_damage', {
+                targetId: target.id,
+                amount,
             });
         }
     }
@@ -1205,6 +1232,7 @@
 
             if (!isInside) {
                 // 出圈后才开始扣血
+                network.broadcastZoneDamage(player, config.zone.damagePerTickOutside * dt);
                 player.takeDamage(config.zone.damagePerTickOutside * dt, player.x, player.y, 0);
                 if (wasInside) player.isInSafeZone = false;  // 只第一次出圈时改
             } else {
@@ -1450,12 +1478,12 @@
     }
 
     function handleKeyDown(event) {
-        if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
+        if (network.playerId === 2 && !gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
             // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
             players[1].isControlDown = true;
             players[1].startCharge(); // Attempt to start charge
         }
-        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
+        if (network.playerId === 1 && !gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey && !players[0].isControlDown) {
             // Check if game is running, P2 exists, key matches P2's control, and key wasn't already down
             players[0].isControlDown = true;
             players[0].startCharge(); // Attempt to start charge
@@ -1463,7 +1491,7 @@
     }
 
     function handleKeyUp(event) {
-        if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
+        if (network.playerId === 2 &&!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey) {
             // Check if game is running, P2 exists, key matches P2's control
             // Only release charge if the control was actually tracked as 'down' for P2
             if (players[1].isControlDown) {
@@ -1472,7 +1500,7 @@
             }
         }
 
-        if (!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
+        if (network.playerId === 1 &&!gameOver && players[0] && event.key.toLowerCase() === players[0].controlKey) {
             // Check if game is running, P2 exists, key matches P2's control
             // Only release charge if the control was actually tracked as 'down' for P2
             if (players[0].isControlDown) {
@@ -1485,6 +1513,9 @@
     // --- Ready System ---
 
     function checkBothReady() {
+        if (roomInfo.id) {
+            return;
+        }
         if (p1Ready && p2Ready) {
             initGame(); // Start the game
         }
@@ -1512,6 +1543,7 @@
         winner = null;
         particles = []; // Clear particles from previous game
         showGameOver = false;
+        isPlaying = true;
         hideReadyBox()
 
         // Reset safe zone
@@ -1549,10 +1581,15 @@
     function endGame(winningPlayer) {
         if (gameOver) return; // Prevent function running multiple times if called rapidly
 
+        if (roomInfo.id && isPlaying) {
+            return;
+        }
+
         gameOver = true;
         winner = winningPlayer;
         cancelAnimationFrame(animationFrameId); // Stop the game loop
         animationFrameId = null;
+        isPlaying = false
 
         // Log result and update UI message
         if (winner) {
@@ -1743,13 +1780,31 @@
     })
 
     const markP1Ready = () => {
+        if(!!roomInfo.id && network.playerId !== 1) {
+            return
+        }
         p1Ready = !p1Ready;
         checkBothReady();
+        network.setReady(p1Ready);
     }
 
     const markP2Ready = () => {
+        if(!!roomInfo.id && network.playerId !== 2) {
+            return
+        }
         p2Ready = !p2Ready;
         checkBothReady();
+        network.setReady(p2Ready);
+    }
+
+    const startMatch = () => {
+        console.log('start match')
+        network.send('join_room');
+    }
+
+    const exitRoom = () => {
+        network.send('leave_room');
+        roomInfo = {}
     }
 
 </script>
@@ -1758,7 +1813,7 @@
 
     <div id="star-background"></div>
 
-    <h1>PoopBot</h1>
+    <h1>DashBot</h1>
 
     <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
         <div id="timer" class="timer-box">Time Left:</div>
@@ -1782,36 +1837,20 @@
                 </div>
             </div>
 
-
-            <!--        <div id="ready-container" class="ready-container">-->
-            <!--            <div class="ready-box">-->
-            <!--                <div class="ready-p-item">-->
-            <!--                    <button id="p1-ready-btn" class="ready-button">Player 1 Ready</button>-->
-            <!--                    <span id="p1-ready-status" class="ready-status">Not Ready</span>-->
-            <!--                </div>-->
-
-            <!--                <div class="ready-p-item">-->
-            <!--                    <button id="p2-ready-btn" class="ready-button">Player 2 Ready</button>-->
-            <!--                    <span id="p2-ready-status" class="ready-status">Not Ready</span>-->
-            <!--                </div>-->
-
-            <!--            </div>-->
-            <!--        </div>-->
-
-            {#if showMenu}
+            {#if showMenu && !roomInfo.id}
                 <div id="menu" class="menu">
                     <div class="tab">
                         <button class="tab-item" onclick={() => isRemoteMode = false}>
                             {#if !isRemoteMode}
                                 <div class="selected"></div>
                             {/if}
-                            <span>Local</span>
+                            <span>Local Mode</span>
                         </button>
                         <button class="tab-item" onclick={() => isRemoteMode = true}>
                             {#if isRemoteMode}
                                 <div class="selected"></div>
                             {/if}
-                            <span>Online</span>
+                            <span>Online Mode</span>
                             <div class="online-status-pointer"></div>
                         </button>
                     </div>
@@ -1819,8 +1858,8 @@
                     {#if isRemoteMode}
                         <div class="online-menu">
                             <div class="counter">
-                                <div class="people-count">people: 1000</div>
-                                <div class="rooms-count">rooms: 200</div>
+                                <div class="people-count">people: {lobbyCount}</div>
+                                <div class="rooms-count">rooms: {roomCount}</div>
                             </div>
                             <div class="rooms">
                                 <div class="room">room1</div>
@@ -1828,45 +1867,39 @@
                                 <div class="room">room3</div>
                                 <div class="room">room4</div>
                             </div>
-                            <div class="start-match">Start match</div>
+                            <button class="start-match" onclick={startMatch}>Start match</button>
                         </div>
                     {:else}
                         <div class="local-menu">
-                            <div class="score-pair">
-                                <div class="score">{localScore[1] || 0}</div>
-                                <div class="symbol">:</div>
-                                <div class="score">{localScore[2] || 0}</div>
-                            </div>
-
-                            <div class="ready-box">
-                                <div class="ready-section">
-                                    <div class="info">
-                                        <div class="name">P1</div>
-                                        {#if p1Ready}
-                                            <div class="ready-status">ready✅</div>
-                                        {:else}
-                                            <div class="ready-status">not ready</div>
-                                        {/if}
-                                    </div>
-                                    <button class="key" class:ready={p1Ready} onclick={markP1Ready}>A</button>
-                                </div>
-                                <div class="ready-section">
-                                    <div class="info">
-                                        <div class="name">P2</div>
-                                        {#if p2Ready}
-                                            <div class="ready-status">ready✅</div>
-                                        {:else}
-                                            <div class="ready-status">not ready</div>
-                                        {/if}
-                                    </div>
-                                    <button class="key" class:ready={p2Ready} onclick={markP2Ready}>L</button>
-                                </div>
-                            </div>
+                            <ReadyBox
+                                    p1Score={localScore[1] || 0} p2Score={localScore[2] || 0}
+                                    p1Ready={p1Ready}
+                                    p2Ready={p2Ready}
+                                    markP1Ready={markP1Ready}
+                                    markP2Ready={markP2Ready}
+                            ></ReadyBox>
                         </div>
                     {/if}
 
                 </div>
             {/if}
+
+            {#if roomInfo.id && !isPlaying}
+                <div class="menu">
+                    <div class="room-header">
+                        <div class="left">
+                            <div class="room-no">RoomID: {roomInfo.id}</div>
+                            <div class="room-singnal">📶</div>
+                        </div>
+                        <buoon class="exit" onclick={exitRoom}>Exit room</buoon>
+                    </div>
+                    <div class="local-menu">
+                        <ReadyBox p1Score={roomInfo.score[1] || 0} p2Score={roomInfo.score[2] || 0} p1Ready={p1Ready} p2Ready={p2Ready} markP1Ready={markP1Ready} markP2Ready={markP2Ready} isOnline={!!roomInfo.id} current={network.playerId}></ReadyBox>
+                    </div>
+                </div>
+            {/if}
+
+
         </div>
         {#if showGameOver}
             <div id="game-over" class="game-over-screen">
@@ -1899,7 +1932,7 @@
     }
 
     h1 {
-        color: #f0a500; /* Yellowish title */
+        color: rgb(25, 104, 194); /* Yellowish title */
         margin-bottom: 10px;
     }
 
@@ -2025,10 +2058,6 @@
         font-size: 1em;
     }
 
-    .ready-button {
-        width: 120px;
-    }
-
     #p1-ready-status, #p2-ready-status {
         background-color: rgba(0, 0, 0, 0.5);
         padding: 5px 10px;
@@ -2039,30 +2068,16 @@
         width: 120px;
     }
 
-    .ready-container {
-        color: white;
-        text-align: center;
-        display: flex;
-        width: 100%;
-        height: 100%;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .ready-p-item:not(:last-of-type) {
-        margin-bottom: 40px;
-    }
-
     body {
         font-family: 'JetBrains Mono', monospace;
         color: white;
     }
 
     h1, .game-title {
-        text-shadow: 0 0 4px #ffcc00;
+        text-shadow: 0 0 4px #0095ff;
     }
 
-    button {
+    :global(button) {
         background-color: rgba(255, 255, 255, 0.08);
         color: white;
         padding: 6px 12px;
@@ -2072,9 +2087,15 @@
         font-weight: bold;
         all: unset; /* 干掉所有默认样式 */
         cursor: pointer; /* 加上手型 */
+        outline: none;
+        border: none;
     }
 
-    button:hover {
+    :global(button):focus {
+        outline: none;
+    }
+
+    :global(button):hover {
         background-color: rgba(255, 255, 255, 0.2);
     }
 
@@ -2149,10 +2170,12 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        padding: 0 24px;
     }
 
     .menu .online-menu .rooms {
         display: flex;
+        padding: 3rem;
     }
 
     .menu .online-menu .start-match {
@@ -2162,94 +2185,38 @@
         font-weight: bold;
         font-size: 1.2em;
         background-color: #5e4a6a;
-        padding: 20px;
+        padding: 20px 0;
         cursor: pointer;
+        width: 100%;
     }
 
     .menu .online-menu .start-match:hover {
         background-color: #8f67a8;
     }
 
-
     .menu .local-menu {
         padding: 24px;
 
     }
 
-    .menu .local-menu .score-pair {
-        padding: 40px;
+    .room-header {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 7rem;
-        font-weight: bold;
-    }
-
-    .menu .local-menu .score-pair .score {
-
-    }
-
-    .menu .local-menu .ready-box {
-        display: flex;
-        width: 100%;
         justify-content: space-between;
-        gap: 10px;
+        padding: 20px 10px;
+        background-color: rgba(0, 0, 0, 0.5);
+
     }
 
-    .menu .local-menu .ready-box .ready-section {
+    .room-header:hover {
+    }
+
+    .room-header .left {
         display: flex;
-        width: 100%;
     }
 
-    .menu .local-menu .ready-box .ready-section:last-child {
-        flex-direction: row-reverse;
-    }
-
-    .menu .local-menu .ready-box .ready-section:last-child .info {
-        /*justify-content: center;*/
-    }
-
-    .menu .local-menu .ready-box .ready-section .info {
-        display: flex;
-        flex-direction: column;
-        width: 50%;
-        align-items: center;
-        justify-content: space-around;
-    }
-
-    .menu .local-menu .ready-box .ready-section .info .ready-status {
-        font-size: 1rem;
-    }
-
-    .menu .local-menu .ready-box .ready-section .info .name {
-
-    }
-
-    .menu .local-menu .ready-box .ready-section .key {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 3em;
-        width: 50%;
-        border: 1px solid #955bda;
+    .room-header .exit {
+        font-weight: bold;
         cursor: pointer;
     }
 
-
-    .menu .local-menu .ready-box .ready-section .key.ready {
-        border: 1px solid #955bda;
-        background-color: rgba(103, 231, 161, 0.61);
-    }
-
-    .menu .local-menu .ready-box .ready-section .key:hover {
-        background-color: rgba(192, 139, 227, 0.41);
-    }
-
-    .menu .local-menu .ready-box .ready-section .key.ready:hover {
-        background-color: rgba(98, 238, 161, 0.78);
-    }
-
-    .menu .local-menu .ready-box .ready-section .info .check {
-        display: flex;
-    }
 </style>
