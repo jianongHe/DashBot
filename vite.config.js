@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-    base: 'http://assets.dashbot.jianong.me/', // Aliyun CDN
+    base: 'https://assets.dashbot.jianong.me/', // Aliyun CDN
     plugins: [
         svelte(),
         tailwindcss(),

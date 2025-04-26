@@ -77,3 +77,4 @@ jobs:
       - name: Refresh CDN Cache
         run: |
           aliyun cdn RefreshObjectCaches --ObjectPath "http://assets.dashbot.jianong.me/" --ObjectType Directory
+          aliyun cdn RefreshObjectCaches --ObjectPath "https://assets.dashbot.jianong.me/" --ObjectType Directory
