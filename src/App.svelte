@@ -28,6 +28,8 @@
     let lastFrameTime = performance.now();
     let isRemoteMode = false; // toggle this to false for local play
     let isHighRefreshRate = false;
+    let p1ChargeRate = 0
+    let p2ChargeRate = 0
 
     // --- Game Configuration ---
     // Centralized settings for game balance and mechanics
@@ -153,7 +155,7 @@
                     segmentLength: 30,         // 每段闪电的长度
                     forkChance: 0.3,           // 每段有概率分叉
                     maxForkDepth: 2,           // 最多生成一次子闪电
-                    color: 'rgba(255,255,255,ALPHA)', // 注意这里用 ALPHA 占位符
+                    color: 'rgba(200,0,0,ALPHA)', // 注意这里用 ALPHA 占位符
                     lineWidth: 1.5,
                     lifespan: 1600,
                     lineWidthStart: 1.5,
@@ -698,6 +700,12 @@
         // --- UI Updates ---
 
         updateChargeIndicator(percentage) {
+            if (this.id === 1) {
+                p1ChargeRate = percentage;
+            } else {
+                p2ChargeRate = percentage;
+            }
+
             this.chargeRatio = percentage
         }
 
@@ -1476,7 +1484,7 @@
             ctx.save(); // Save current context state
             ctx.translate(p.x, p.y); // Move origin to particle position
             ctx.rotate(p.rotation); // Rotate
-            ctx.font = `${Math.max(1, p.size)}px sans-serif`; // Use particle size, ensure minimum 1px
+            ctx.font = `${Math.max(1, 18)}px sans-serif`; // Use particle size, ensure minimum 1px
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             // Fade out particle based on remaining life
@@ -1975,13 +1983,12 @@
             <div class="player-info flex justify-between items-start">
                 <div id="player1-info" class="flex flex-col items-start gap-1">
                     <div>P1 (A): <span id="p1-hp">{ config.robot.maxHp }</span> HP</div>
-                    {players[0]?.chargeRatio || 0}
-                    <ChargeBar chargeLevel={players[0]?.chargeRatio} totalSegments={20} color="purple" />
+                    <ChargeBar chargeLevel={p1ChargeRate / 100} totalSegments={30} color="purple" />
                 </div>
 
                 <div id="player2-info" class="flex flex-col items-end gap-1">
                     <div>P2 (L): <span id="p2-hp">{ config.robot.maxHp }</span> HP</div>
-                    <ChargeBar chargeLevel={players[1]?.chargeRatio} totalSegments={20} color="green" />
+                    <ChargeBar chargeLevel={p2ChargeRate / 100} totalSegments={30} color="green" reverse />
                 </div>
             </div>
 
