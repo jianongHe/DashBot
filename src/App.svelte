@@ -17,9 +17,9 @@
     const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
-    redUfoImage.src = assetDomain + '/assets/red_ufo.png';
+    redUfoImage.src = assetDomain + '/assets/we.png';
     const blueUfoImage = new Image();
-    blueUfoImage.src = assetDomain + '/assets/blue_ufo.png';
+    blueUfoImage.src = assetDomain + '/assets/we222.png';
 
     // --- Constants ---
     const MS_PER_SECOND = 1000;
