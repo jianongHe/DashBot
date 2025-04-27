@@ -2029,9 +2029,9 @@
     <div class="flex justify-center my-6">
         <div class="text-center max-w-2xl relative px-4 py-2">
             <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-purple-500"></div>
-            <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-purple-500"></div>
+            <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-green-500"></div>
             <div class="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-purple-500"></div>
-            <div class="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-purple-500"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-green-500"></div>
 
             <div class="mx-1">
                 <p class="font-bold text-yellow-400"> Press "A" or "L" to dash!</p>
@@ -2047,9 +2047,9 @@
 
     <div class="flex justify-between items-center mb-2 pl-2 bg-black/30 border border-purple-800/30 rounded relative">
         <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
-        <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
+        <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
         <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
-        <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-purple-500"></div>
+        <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-green-500"></div>
 
         <div class="flex items-center gap-2 py-1">
             <div class="text-sm font-bold text-purple-500 flex items-center">
