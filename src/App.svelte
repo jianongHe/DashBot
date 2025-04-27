@@ -2263,17 +2263,6 @@
         color: #1a1a2e;
     }
 
-    #star-background {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-        z-index: -1;
-    }
-
     :global(.star) {
         position: absolute;
         background: white;
@@ -2331,6 +2320,13 @@
     }
 
     #star-background {
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+
         pointer-events: none;
         z-index: 1;
         position: absolute;
@@ -2400,7 +2396,7 @@
     .menu .online-menu .counter {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: space-around;
         padding: 0 24px;
     }
 
@@ -2433,9 +2429,8 @@
     .room-header {
         display: flex;
         justify-content: space-between;
-        padding: 20px 10px;
+        align-items: center;
         background-color: rgba(0, 0, 0, 0.5);
-
     }
 
     .room-header:hover {
@@ -2443,11 +2438,17 @@
 
     .room-header .left {
         display: flex;
+        padding-left: 20px;
     }
 
     .room-header .exit {
         font-weight: bold;
         cursor: pointer;
+        padding: 20px;
+    }
+
+    .room-header .exit:hover {
+        background-color: rgba(91, 26, 76, 0.5);
     }
 
 </style>
