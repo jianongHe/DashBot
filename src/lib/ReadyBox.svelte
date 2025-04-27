@@ -32,7 +32,7 @@
                 {#if p1Ready}
                     <div class="ready-status">ready✅</div>
                 {:else}
-                    <div class="ready-status" class:animate-dots={!(current === 1)} class:text-yellow-400={!(current === 1)}>{isOnline && current === 1 ? 'not ready' : 'waiting'}</div>
+                    <div class="ready-status" class:animate-dots={!(current === 1)} class:text-yellow-400={!(current === 1)}>{current === 1 ? 'not ready' : 'waiting'}</div>
                 {/if}
             </div>
             <button class="key" class:ready={p1Ready} onclick={markP1Ready}>A</button>
@@ -48,7 +48,7 @@
                 {#if p2Ready}
                     <div class="ready-status">ready✅</div>
                 {:else}
-                    <div class="ready-status" class:animate-dots={!(current === 2)} class:text-yellow-400={!(current === 2)}>{isOnline && current === 1 ? 'not ready' : 'waiting'}</div>
+                    <div class="ready-status" class:animate-dots={!(current === 2)} class:text-yellow-400={!(current === 2)}>{current === 2 ? 'not ready' : 'waiting'}</div>
                 {/if}
             </div>
             <button class="key" class:ready={p2Ready} onclick={markP2Ready}>L</button>
