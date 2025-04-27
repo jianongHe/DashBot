@@ -14,13 +14,15 @@
      * while a safe zone shrinks.
      */
 
-    const assetDomain = 'https://assets.dashbot.jianong.me'
-    // const assetDomain = ''
+    // const assetDomain = 'https://assets.dashbot.jianong.me'
+    const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
     redUfoImage.src = assetDomain + '/assets/we.png';
     const blueUfoImage = new Image();
     blueUfoImage.src = assetDomain + '/assets/we222.png';
+    const audio = new Audio(assetDomain + '/voices/0427.MP3');
+    audio.loop = true;
 
     // --- Constants ---
     const MS_PER_SECOND = 1000;
@@ -71,12 +73,12 @@
                 },
                 color: {
                     red: {
-                        baseColor: 'rgba(255,0,255,0.62)', // 竖条的基础颜色
-                        highlightColor: 'rgba(255,0,255,0.62)' // 指针方向竖条的高亮颜色
+                        baseColor: 'rgba(153,14,252,0.9)', // 竖条的基础颜色
+                        highlightColor: 'rgba(153,14,252,0.9)' // 指针方向竖条的高亮颜色
                     },
                     blue: {
-                        baseColor: 'rgba(0,255,0,0.71)', // 竖条的基础颜色
-                        highlightColor: 'rgba(0,255,0,0.71)' // 指针方向竖条的高亮颜色
+                        baseColor: 'rgba(5,223,114,0.9)', // 竖条的基础颜色
+                        highlightColor: 'rgba(5,223,114,0.9)' // 指针方向竖条的高亮颜色
                     }
                 }
             },
@@ -1667,6 +1669,10 @@
 
     function initGame() {
         console.log("Initializing game...");
+        audio.pause();
+        audio.currentTime = 0;
+        audio.play();
+
         gameOver = false;
         winner = null;
         particles = []; // Clear particles from previous game
