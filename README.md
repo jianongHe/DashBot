@@ -1,83 +1,84 @@
+# DashBot - 1v1 Space Robot Sprint Battle Game
 
-# DashBot - 1v1 太空机器人冲刺对战游戏
+[中文](README-CN.md) | [English](README.md)
+
+## 🌌 Game Background
+
+In a distant galaxy, an abandoned space station drifts with a group of lonely coding robots.
+
+Due to propulsion system failure, they can't walk like normal robots and can only move by **jetting out waste code from their internal cycle system**.
 
 ![dashbot_example](https://github.com/user-attachments/assets/c7356d0a-3ab3-4c66-9a86-564de1ecd8b0)
 
-## 🌌 游戏背景
+---
 
-在遥远的宇宙中，有一座废弃的空间站，漂浮着一群孤独的编码机器人。
+## 🎮 Core Gameplay
 
-由于推进系统失效，它们无法像普通机器人那样走路，只能靠**内部循环系统排出的代码废料**进行喷射前进。
+You and another player each control a robot that **cannot walk**, and the only thing you can do is:
+
+### ✅ "Hold to charge, release to jet forward with code!"
+
+- The robot has a rotating direction pointer that **spins clockwise continuously**
+- Hold down the mouse/touch to **charge**
+- The longer you charge, the farther and faster you jet, with more damage (from 20 to 60)
+- Once you press, **you can't cancel**—you must release and dash!
+
+This forces you to **predict direction + time your move + mind-game your opponent**. One well-timed dash can flip the whole fight!
 
 ---
 
-## 🎮 游戏玩法核心
+## 💥 Battle Rules
 
-你和另一个玩家各控制一台机器人，**不能走路**，唯一能做的事情就是：
-
-### ✅ “按住蓄力，松手喷代码串冲刺！”
-
-- 机器人头上有一个方向指针，会**不断顺时针旋转**
-- 当你按住鼠标/触屏时开始**蓄力**
-- 蓄力时间越久，喷射得越远、速度越快、造成的伤害也越高（从 20 到 60 不等）
-- 一旦按下就**无法取消蓄力，必须喷出去**
-
-这个设定让你必须**预判方向 + 计算时机 + 心理博弈**，一招冲刺用得好，能直接改变局势！
-
----
-
-## 💥 战斗规则详解
-
-| 机制       | 描述                                            |
-|----------|-----------------------------------------------|
-| **血量机制** | 每个机器人有 **100 HP**                             |
-| **冲刺伤害** | 命中造成 **20～60 伤害**，视蓄力时间而定                     |
-| **击退效果** | 命中会把对方击退一小段距离                                 |
-| **地图效果** | 击中地图边缘会反弹，利用此机制反击对方                           |
-| **毒圈机制** | 战斗开始一段时间后，场地开始缩小，站在毒圈外的机器人会**持续掉血**（例如 5 点/秒） |
-| **速度提升** | 随着时间推进，方向盘旋转速度加快，增强战斗节奏感                      |
-| **胜利条件** | 击败对方（将 HP 降至 0）或让对方因毒圈掉血致死                    |
+| Mechanic       | Description                                               |
+|----------------|-----------------------------------------------------------|
+| **HP System**   | Each robot has **100 HP**                                 |
+| **Dash Damage** | Hitting deals **20~60 damage**, depending on charge time  |
+| **Knockback**   | Hitting knocks the opponent back slightly                 |
+| **Map Bounce**  | Hitting map edges causes rebounds, use it to counterattack |
+| **Poison Zone** | After a while, the arena shrinks; outside robots **lose HP** (e.g., 5/sec) |
+| **Speed Up**    | Pointer spin speeds up over time, increasing battle pace  |
+| **Win Condition** | Defeat the opponent (reduce HP to 0) or let them die in poison |
 
 ---
 
-## 🧠 战斗节奏设计
+## 🧠 Battle Flow
 
-1. **开局对线期**：大家试探出招，练习手感
-2. **中期缩圈**：节奏加快，空间变小，开始互相逼位
-3. **后期混战**：方向盘加速，圈越来越小，谁先冲错谁就可能送命
-
----
-
-## 🔥 附加玩法亮点
-
-- 支持**实时匹配**：玩家进入大厅可等待匹配 1v1
-- 多个房间**并发对战**，每场战斗互不干扰
-- 未来支持**实时观战**：其他玩家可进入任意房间观看战局
-- 未来支持对战录像、排行榜、皮肤系统等扩展
+1. **Early Phase**: Test moves, get a feel for timing
+2. **Mid Phase**: Arena shrinks, pace quickens, positioning gets tight
+3. **Late Game**: Fast pointer, tiny space, one wrong dash could be fatal
 
 ---
 
-## 🎨 美术风格
+## 🔥 Extra Features
 
-- 采用**像素风格**+ 太空科幻背景
-- 角色为圆头机器宇航员，喷射尾气为蓝色代码串，也许里面有你熟悉的代码片段
-- UI 界面简洁直观
+- Supports **real-time matchmaking**: wait in lobby for 1v1
+- **Concurrent matches**: multiple rooms, independent battles
+- Future: **live spectating**: watch any match as a viewer
+- Future: battle replays, leaderboards, skins, and more
 
 ---
 
-## 🛠 技术实现简述
+## 🎨 Art Style
 
-- 前端使用vite+svelte搭建页面UI和客户端游戏逻辑
-- 服务端使用nodejs+websocket同步,存储,和广播游戏状态
-- 使用Aliyun Redis存储房间和队列状态
-- 使用阿里云镜像服务构建docker镜像并部署
-- caddy来作为代理服务
+- **Pixel art** + space sci-fi theme
+- Characters are round-headed robot astronauts, jet trails are blue code strings—maybe you’ll spot familiar code!
+- Clean, intuitive UI
 
-- WebSocket 实现实时通信
-- 阿里云 OSS 托管前端 & 资源
-- ECS 部署游戏websocket逻辑服务器
-- Redis / RDS 管理房间和匹配队列
-- CDN 加速静态资源分发
-- 支持可拓展的观战系统与战斗日志存储
+---
+
+## 🛠 Tech Overview
+
+- Frontend: vite + svelte for UI & client game logic
+- Backend: nodejs + websocket for sync, storage, broadcast
+- Aliyun Redis for room & queue states
+- Docker image built with Aliyun image service
+- Caddy as reverse proxy
+
+- WebSocket for real-time communication
+- Aliyun OSS hosts frontend & assets
+- ECS for game websocket logic server
+- Redis / RDS for rooms & matchmaking queues
+- CDN for static asset delivery
+- Expandable spectating & battle log system
 
 ---
