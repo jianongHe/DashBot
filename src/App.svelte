@@ -1609,7 +1609,7 @@
             players[0].startCharge(); // Attempt to start charge
         }
         if (event.button === 2 && !gameOver && players[1]) { // Left mouse button, game running, P1 exists
-            if (roomInfo.id && network.playerId !== 1) {
+            if (roomInfo.id && network.playerId !== 2) {
                 return;
             }
 
