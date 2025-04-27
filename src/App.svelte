@@ -2065,6 +2065,23 @@
             {/if}
         </div>
 
+        <div class="flex justify-center items-center bg-black/40 px-4 rounded-full w-fit border border-gray-800/50 absolute left-1/2 transform -translate-x-1/2">
+            <div class="absolute top-0 left-4 w-full h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+            <div class="absolute bottom-0 left-4 w-full h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent"></div>
+
+            <div class="flex items-center gap-2">
+<!--                <RobotIcon class="h-4 w-4 text-purple-500" />-->
+                <span class="font-bold text-purple-500">P1</span>
+                <span class="text-xl font-bold">{(roomInfo.id ? roomInfo.score[1] : localScore[1]) || 0}</span>
+            </div>
+            <div class="mx-3 text-gray-500">vs</div>
+            <div class="flex items-center gap-2">
+                <span class="text-xl font-bold">{(roomInfo.id ? roomInfo.score[2] : localScore[2]) || 0}</span>
+                <span class="font-bold text-green-400">P2</span>
+<!--                <RobotIcon class="h-4 w-4 text-green-400" />-->
+            </div>
+        </div>
+
         <div class="flex items-center gap-3">
 
             <div
