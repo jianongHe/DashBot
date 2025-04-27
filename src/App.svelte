@@ -1597,12 +1597,12 @@
 
     function handleMouseDown(event) {
         if (event.button === 0 && !gameOver && players[0]) { // Left mouse button, game running, P1 exists
+            if (roomInfo.id && network.playerId !== 1) {
+                return;
+            }
+
             players[0].isControlDown = true;
             players[0].startCharge(); // Attempt to start charge
-        }
-        if (event.button === 1 && !gameOver && players[1]) { // Left mouse button, game running, P1 exists
-            players[1].isControlDown = true;
-            players[1].startCharge(); // Attempt to start charge
         }
     }
 
