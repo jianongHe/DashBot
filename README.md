@@ -69,16 +69,11 @@ This forces you to **predict direction + time your move + mind-game your opponen
 ## 🛠 Tech Overview
 
 - Frontend: vite + svelte for UI & client game logic
-- Backend: nodejs + websocket for sync, storage, broadcast
-- Aliyun Redis for room & queue states
-- Docker image built with Aliyun image service
-- Caddy as reverse proxy
-
-- WebSocket for real-time communication
-- Aliyun OSS hosts frontend & assets
-- ECS for game websocket logic server
-- Redis / RDS for rooms & matchmaking queues
-- CDN for static asset delivery
-- Expandable spectating & battle log system
+- Backend: nodejs + websocket + caddy for sync, storage, broadcast
+- Github Action for CI/CD
+- Alibaba ACR for docker image service
+- Alibaba OSS hosts frontend & assets
+- Alibaba CDN for static asset delivery
+- Alibaba ECS for game websocket logic server
 
 ---
