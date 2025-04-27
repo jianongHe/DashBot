@@ -2013,12 +2013,12 @@
 
     <div id="star-background"></div>
 
-    <h1 class="text-5xl md:text-7xl font-bold mb-2 text-purple-600 tracking-tight relative">
+    <h1 class="text-5xl md:text-7xl font-bold mb-2 flex justify-center items-center text-purple-600 tracking-tight relative">
             <span class="relative flex justify-center items-center">
               DASH<span class="text-green-400">BOT</span>
-                <img src={RobotIcon} width="70">
-              <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div class="absolute -top-1 -right-20 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             </span>
+        <img src={RobotIcon} width="70">
     </h1>
     <p class="text-lg md:text-xl text-gray-400 flex items-center justify-center mt-3">
         <span class="inline-block w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
@@ -2102,24 +2102,29 @@
         <div id="ui" class:prevent-pointer={gameStartTime && !gameOver}>
             <div class="player-info flex justify-between items-start ">
                 <div id="player1-info" class="flex flex-col items-start gap-1 text-purple-500">
-                    <div class="flex">
+                    <div class="flex relative">
 
                         <div class="bg-purple-900/50 flex mr-2 justify-center items-center px-2 rounded text-sm border border-purple-800/50">
                             <Icon icon="material-symbols:robot-2-outline-rounded" width="24" height="24"/>
                             P1
                         </div>
 
-                        <div id="p1-hp">{ config.robot.maxHp }</div>
-                        <div>&nbsp;HP</div>
+                        <div class="flex absolute left-20 top-1 text-xl font-bold">
+                            <div id="p1-hp">{ config.robot.maxHp }</div>
+                            <div>&nbsp;HP</div>
+                        </div>
+
 
                     </div>
                     <ChargeBar chargeLevel={p1ChargeRate / 100} totalSegments={30} color="purple"/>
                 </div>
 
                 <div id="player2-info" class="flex flex-col items-end gap-1 text-green-500">
-                    <div class="flex">
-                        <div id="p2-hp">{ config.robot.maxHp }</div>
-                        <div>&nbsp;HP</div>
+                    <div class="flex relative">
+                        <div class="flex absolute right-20 top-1 text-xl font-bold">
+                            <div id="p2-hp">{ config.robot.maxHp }</div>
+                            <div>&nbsp;HP</div>
+                        </div>
 
                         <div class="bg-green-900/50 flex ml-2 justify-center items-center px-2 rounded text-sm border border-green-800/50">
                             P2
