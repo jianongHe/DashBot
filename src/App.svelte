@@ -4,6 +4,7 @@
     import ChargeBar from "./lib/ChargeBar.svelte";
     import Icon from '@iconify/svelte';
     import RobotIcon from './assets/icons/RobotIcon.svg';
+    import QA from './lib/QA.svelte';
 
     let canvas;
     let ctx;
@@ -1607,6 +1608,14 @@
             players[0].isControlDown = true;
             players[0].startCharge(); // Attempt to start charge
         }
+        if (event.button === 2 && !gameOver && players[1]) { // Left mouse button, game running, P1 exists
+            if (roomInfo.id && network.playerId !== 1) {
+                return;
+            }
+
+            players[1].isControlDown = true;
+            players[1].startCharge(); // Attempt to start charge
+        }
     }
 
     function handleMouseUp(event) {
@@ -1615,6 +1624,13 @@
             if (players[0].isControlDown) {
                 players[0].isControlDown = false;
                 players[0].releaseCharge(); // Attempt to release charge
+            }
+        }
+        if (event.button === 2 && !gameOver && players[1]) { // Left mouse button
+            // Only release charge if the control was actually tracked as 'down' for P1
+            if (players[1].isControlDown) {
+                players[1].isControlDown = false;
+                players[1].releaseCharge(); // Attempt to release charge
             }
         }
     }
@@ -2014,6 +2030,8 @@
 
 <main>
 
+    <QA />
+
     <div id="star-background"></div>
 
     <h1 class="text-5xl md:text-7xl font-bold mb-2 flex justify-center items-center text-purple-600 tracking-tight relative">
@@ -2048,7 +2066,7 @@
 <!--        <div id="shrink-timer" class="timer-box shrink">Shrink In:</div>-->
 <!--    </div>-->
 
-    <div class="flex justify-between items-center mb-2 pl-2 bg-black/30 border border-purple-800/30 rounded relative">
+    <div class="flex justify-between items-center mb-2 pl-2 bg-black/30 border border-purple-800/30 rounded relative" style="height: 40px">
         <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
         <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
         <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
