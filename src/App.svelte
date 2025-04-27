@@ -14,8 +14,8 @@
      * while a safe zone shrinks.
      */
 
-    const assetDomain = 'https://assets.dashbot.jianong.me'
-    // const assetDomain = ''
+    // const assetDomain = 'https://assets.dashbot.jianong.me'
+    const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
     redUfoImage.src = assetDomain + '/assets/we.png';
@@ -45,6 +45,7 @@
     let isHighRefreshRate = false;
     let p1ChargeRate = 0
     let p2ChargeRate = 0
+    let enableVoice = true;
 
     // --- Game Configuration ---
     // Centralized settings for game balance and mechanics
@@ -914,6 +915,12 @@
         }
     }
 
+    function playBgmAudio() {
+        bgmAudio.pause();
+        bgmAudio.currentTime = 0;
+        bgmAudio.play();
+    }
+
     function playHitAudio() {
         hitAudio.currentTime = 0.1;
         hitAudio.play();
@@ -1705,9 +1712,7 @@
 
     function initGame() {
         console.log("Initializing game...");
-        bgmAudio.pause();
-        bgmAudio.currentTime = 0;
-        bgmAudio.play();
+        playBgmAudio()
 
         gameOver = false;
         winner = null;
@@ -1987,6 +1992,19 @@
         roomInfo = {}
     }
 
+    const toggleVoice = () => {
+        enableVoice = !enableVoice;
+
+        const muted = !enableVoice
+
+        bgmAudio.muted = muted
+        hitAudio.muted = muted
+        chargeAudio[1].muted = muted
+        chargeAudio[2].muted = muted
+        releaseAudio[1].muted = muted
+        releaseAudio[2].muted = muted
+    }
+
     $: poisonActive = ShrinkingState !== 'safe';
 
 </script>
@@ -2027,7 +2045,7 @@
 <!--        <div id="shrink-timer" class="timer-box shrink">Shrink In:</div>-->
 <!--    </div>-->
 
-    <div class="flex justify-between items-center mb-2 px-2 bg-black/30 border border-purple-800/30 rounded relative">
+    <div class="flex justify-between items-center mb-2 pl-2 bg-black/30 border border-purple-800/30 rounded relative">
         <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
         <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
         <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
@@ -2064,10 +2082,14 @@
                 <div class="text-yellow-400">{formattedTime}</div>
             </div>
 
-<!--            <div class="px-2 py-1 rounded cursor-pointer text-sm border border-red-800/50 flex items-center gap-1 hover:bg-red-900/50 pointer transform scale-x-[-1]">-->
+            <div onclick={toggleVoice} class="px-2 py-1 rounded cursor-pointer text-sm text-yellow-400 border border-yellow-800/50 flex items-center gap-1 hover:bg-yellow-900/50 pointer transform scale-x-[-1]" style="height:34px">
                 <!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
-<!--                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24"/>-->
-<!--            </div>-->
+                {#if enableVoice}
+                    <Icon icon="line-md:volume-high-twotone" width="24" height="24"/>
+                {:else}
+                    <Icon icon="line-md:volume-remove-twotone" width="24" height="24" />
+                {/if}
+            </div>
         </div>
     </div>
     <div id="game-container">
