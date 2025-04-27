@@ -916,9 +916,10 @@
     }
 
     function playBgmAudio() {
-        bgmAudio.pause();
-        bgmAudio.currentTime = 0;
-        bgmAudio.play();
+        if (bgmAudio.paused) {
+            // 没在播
+            bgmAudio.play();
+        }
     }
 
     function playHitAudio() {
@@ -2235,7 +2236,7 @@
                     <h2 class="text-4xl font-bold mb-4 text-yellow-400 text-center">GAME OVER</h2>
                     <p class="text-2xl mb-6 text-center flex items-center justify-center">
                         <!--                    <RobotIcon className={`h-6 w-6 mr-2 ${winner === 0 ? "text-purple-500" : "text-green-400"}`} />-->
-                        <Icon icon="material-symbols:robot-2-outline-rounded" width="32" height="32"/>
+                        <Icon icon="material-symbols:robot-2-outline-rounded" class={winner ? winner.id === 1 ? 'text-purple-500' : 'text-green-500' : ''} width="32" height="32"/>
 
                         {#if winner}
                             Player {winner.id} Wins!
