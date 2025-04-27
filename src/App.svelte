@@ -2216,7 +2216,7 @@
                         <Icon icon="material-symbols:robot-2-outline-rounded" width="32" height="32"/>
 
                         {#if winner}
-                            Player {winner} Wins!
+                            Player {winner.id} Wins!
                         {:else}
                             It's draw!
                         {/if}
