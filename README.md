@@ -63,6 +63,7 @@ This forces you to **predict direction + time your move + mind-game your opponen
 - **Pixel art** + space sci-fi theme
 - Characters are round-headed robot astronauts, jet trails are blue code strings—maybe you’ll spot familiar code!
 - Clean, intuitive UI
+- The game's theme and palette are inspired by Evangelion Unit-01 (purple & green).
 
 ---
 
