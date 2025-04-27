@@ -2266,10 +2266,8 @@
                     </p>
 
                     <div class="flex gap-4 justify-center">
-                        <div class="border-green-800 text-green-400 hover:bg-green-900/50 p-2 rounded relative overflow-hidden">
-                            <button onclick={hideGameOverScreen}>
-                                Play Again
-                            </button>
+                        <div onclick={hideGameOverScreen} class="border-green-800 text-green-400 cursor-pointer hover:bg-green-900/50 p-2 rounded relative overflow-hidden">
+                            Play Again
                         </div>
                     </div>
                 </div>
