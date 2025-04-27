@@ -2215,7 +2215,11 @@
                         <!--                    <RobotIcon className={`h-6 w-6 mr-2 ${winner === 0 ? "text-purple-500" : "text-green-400"}`} />-->
                         <Icon icon="material-symbols:robot-2-outline-rounded" width="32" height="32"/>
 
-                        Player 1 Wins!
+                        {#if winner}
+                            Player {winner} Wins!
+                        {:else}
+                            It's draw!
+                        {/if}
                     </p>
 
                     <div class="flex gap-4 justify-center">
