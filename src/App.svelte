@@ -2082,7 +2082,7 @@
                 <div class="text-yellow-400">{formattedTime}</div>
             </div>
 
-            <div onclick={toggleVoice} class="px-2 py-1 rounded cursor-pointer text-sm text-yellow-400 border border-yellow-800/50 flex items-center gap-1 hover:bg-yellow-900/50 pointer transform scale-x-[-1]" style="height:34px">
+            <div onclick={toggleVoice} class="px-2 py-1 rounded cursor-pointer text-sm text-yellow-400 border border-yellow-800/50 flex items-center gap-1 hover:bg-yellow-900/50 pointer transform scale-x-[-1]" style="height:34px; width: 42px">
                 <!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
                 {#if enableVoice}
                     <Icon icon="line-md:volume-high-twotone" width="24" height="24"/>
