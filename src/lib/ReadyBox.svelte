@@ -1,4 +1,6 @@
 <script>
+    import Icon from "@iconify/svelte";
+
     export let p1Ready;
     export let p2Ready;
     export let p1Score;
@@ -21,22 +23,32 @@
     <div class="ready-box">
         <div class="ready-section" class:disable={isOnline && current !== 1}>
             <div class="info">
-                <div class="name">P1</div>
+                <div class="name text-purple-500">
+                    <div class="flex mr-2 p-2 justify-center items-center px-2 rounded text-sm">
+                        <Icon icon="material-symbols:robot-2-outline-rounded" width="24" height="24"/>
+                        P1
+                    </div>
+                </div>
                 {#if p1Ready}
                     <div class="ready-status">ready✅</div>
                 {:else}
-                    <div class="ready-status">{isOnline && current === 1 ? 'not ready' : 'waiting'}</div>
+                    <div class="ready-status" class:animate-dots={!(current === 1)} class:text-yellow-400={!(current === 1)}>{isOnline && current === 1 ? 'not ready' : 'waiting'}</div>
                 {/if}
             </div>
             <button class="key" class:ready={p1Ready} onclick={markP1Ready}>A</button>
         </div>
         <div class="ready-section" class:disable={isOnline && current !== 2}>
             <div class="info">
-                <div class="name">P2</div>
+                <div class="name text-green-500">
+                    <div class="flex mr-2 p-2 justify-center items-center px-2 rounded text-sm">
+                        <Icon icon="material-symbols:robot-2-outline-rounded" width="24" height="24"/>
+                        P2
+                    </div>
+                </div>
                 {#if p2Ready}
                     <div class="ready-status">ready✅</div>
                 {:else}
-                    <div class="ready-status">{isOnline && current === 2 ? 'not ready' : 'waiting'}</div>
+                    <div class="ready-status" class:animate-dots={!(current === 2)} class:text-yellow-400={!(current === 2)}>{isOnline && current === 1 ? 'not ready' : 'waiting'}</div>
                 {/if}
             </div>
             <button class="key" class:ready={p2Ready} onclick={markP2Ready}>L</button>
@@ -97,6 +109,24 @@
 
     .ready-box .ready-section .info .ready-status {
         font-size: 1rem;
+        width: 100%;
+    }
+
+    @keyframes dots {
+        0% { content: ''; }
+        33% { content: '.'; }
+        66% { content: '..'; }
+        100% { content: '...'; }
+    }
+
+    .ready-box .ready-section .info .ready-status.animate-dots {
+        position: relative;
+    }
+
+    .ready-box .ready-section .info .ready-status.animate-dots::after {
+        position: absolute;
+        content: '';
+        animation: dots 1s steps(3, end) infinite;
     }
 
     .ready-box .ready-section .info .name {

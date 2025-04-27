@@ -3,6 +3,7 @@
     import ReadyBox from "./lib/ReadyBox.svelte";
     import ChargeBar from "./lib/ChargeBar.svelte";
     import Icon from '@iconify/svelte';
+    import RobotIcon from './assets/icons/RobotIcon.svg';
 
     let canvas;
     let ctx;
@@ -1944,8 +1945,9 @@
     <div id="star-background"></div>
 
     <h1 class="text-5xl md:text-7xl font-bold mb-2 text-purple-600 tracking-tight relative">
-            <span class="relative">
+            <span class="relative flex justify-center items-center">
               DASH<span class="text-green-400">BOT</span>
+                <img src={RobotIcon} width="70">
               <div class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             </span>
     </h1>
@@ -2011,17 +2013,17 @@
                 <div class="text-yellow-400">{formattedTime}</div>
             </div>
 
-            <div class="px-2 py-1 rounded cursor-pointer text-sm border border-red-800/50 flex items-center gap-1 hover:bg-red-900/50 pointer transform scale-x-[-1]">
+<!--            <div class="px-2 py-1 rounded cursor-pointer text-sm border border-red-800/50 flex items-center gap-1 hover:bg-red-900/50 pointer transform scale-x-[-1]">-->
                 <!--                <AlertTriangleIcon class="h-3 w-3 text-red-500" />-->
-                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24"/>
-            </div>
+<!--                <Icon icon="material-symbols-light:exit-to-app-rounded" width="24" height="24"/>-->
+<!--            </div>-->
         </div>
     </div>
     <div id="game-container">
-        <div class="absolute top-0 left-0 w-8 h-8 border-t border-l border-purple-500"></div>
-        <div class="absolute top-0 right-0 w-8 h-8 border-t border-r border-green-500"></div>
-        <div class="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-purple-500"></div>
-        <div class="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-green-500"></div>
+        <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-purple-500"></div>
+        <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-500"></div>
+        <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-purple-500"></div>
+        <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-500"></div>
 
 
         <div id="ui" class:prevent-pointer={gameStartTime && !gameOver}>
