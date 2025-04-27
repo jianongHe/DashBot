@@ -67,9 +67,9 @@
             <!-- Tab Content -->
             <div class="overflow-y-auto min-h-[60vh] max-h-[60vh] px-6 pb-6 text-sm text-gray-300 space-y-4 custom-scrollbar">
                 {#if tab === 'about'}
-                    <div class="space-y-4">
+                    <div class="space-y-4 text-left">
                         <!-- Game Background -->
-                        <div class="bg-black/30 p-4 rounded-md border border-purple-800/50 relative">
+                        <div class="bg-black/30 p-4 rounded-md border border-purple-800/50 relative text-left">
                             <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
                             <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
                             <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
@@ -81,58 +81,16 @@
                             </h3>
 
                             <p class="mb-2">
-                                <span class="text-green-400 font-bold">DASHBOT</span> is a 1v1 space robot battle game set in a derelict space station, where lonely maintenance bots roam.
+                                <span class="text-green-400 font-bold">DASHBOT</span> is a 1v1 space coding robot battle game, created in a derelict space station where maintenance bots rely on ejecting code strings to dash forward.
                             </p>
 
                             <p>
-                                With no functional legs, these robots rely on ejecting solid waste to dash forward. Use this unique movement to your advantage and outwit your opponent!
+                                With their propulsion systems failed, these robots can't walk. Instead, they charge and release code to blast through the arena. Predict your opponent's move, time your dash, and dominate the battlefield!
                             </p>
-                        </div>
-
-                        <!-- Core Gameplay -->
-                        <div class="bg-black/30 p-4 rounded-md border border-green-500/50 relative">
-                            <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500"></div>
-                            <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
-                            <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-green-500"></div>
-                            <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-green-500"></div>
-
-                            <h3 class="text-xl font-bold text-green-400 mb-2 flex items-center">
-                                <span class="inline-block w-2 h-2 bg-green-500 mr-2"></span>
-                                Core Gameplay
-                            </h3>
-
-                            <p class="mb-2">Control your robot with only one action:</p>
-                            <ul class="list-disc pl-5 space-y-1">
-                                <li>Hold to charge, release to dash in the direction of your rotating pointer.</li>
-                                <li>Longer charge = further dash, faster speed, more damage (20~60 HP).</li>
-                                <li>Charging cannot be canceled. Once started, you must dash!</li>
-                            </ul>
-                            <p class="mt-2">
-                                Predict, time your dash, and outsmart your opponent in every move!
-                            </p>
-                        </div>
-
-                        <!-- Battle Flow -->
-                        <div class="bg-black/30 p-4 rounded-md border border-purple-800/50 relative">
-                            <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
-                            <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
-                            <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
-                            <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-purple-500"></div>
-
-                            <h3 class="text-xl font-bold text-purple-400 mb-2 flex items-center">
-                                <span class="inline-block w-2 h-2 bg-purple-500 mr-2"></span>
-                                Battle Flow
-                            </h3>
-
-                            <ol class="list-decimal pl-5 space-y-1">
-                                <li><strong>Opening:</strong> Both players test moves, feel the timing.</li>
-                                <li><strong>Mid-game:</strong> The arena shrinks, dashes intensify.</li>
-                                <li><strong>Final Clash:</strong> Fast spinning pointers, tight space, one mistake could cost the match.</li>
-                            </ol>
                         </div>
 
                         <!-- Art Style -->
-                        <div class="bg-black/30 p-4 rounded-md border border-green-500/50 relative">
+                        <div class="bg-black/30 p-4 rounded-md border border-green-500/50 relative text-left">
                             <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500"></div>
                             <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
                             <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-green-500"></div>
@@ -144,9 +102,49 @@
                             </h3>
 
                             <ul class="list-disc pl-5 space-y-1">
-                                <li>Pixel art meets space sci-fi aesthetics.</li>
-                                <li>Robots: Round-headed astronauts, dashing with brown waste particles.</li>
-                                <li>UI: Minimalist, intuitive, desktop & mobile-friendly.</li>
+                                <li>Pixel art fused with a sci-fi space station setting.</li>
+                                <li>Robots: Round-headed astronauts, dashing by ejecting blue streams of code.</li>
+                                <li>The game's theme and palette are inspired by Evangelion Unit-01 (purple & green).</li>
+                                <li>Currently designed for desktop play only.</li>
+                            </ul>
+                        </div>
+
+                        <!-- About Project -->
+                        <div class="bg-black/30 p-4 rounded-md border border-purple-800/50 relative text-left">
+                            <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
+                            <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
+                            <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
+                            <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-purple-500"></div>
+
+                            <h3 class="text-xl font-bold text-purple-400 mb-2 flex items-center">
+                                <span class="inline-block w-2 h-2 bg-purple-500 mr-2"></span>
+                                About This Project
+                            </h3>
+
+                            <p class="mb-2">
+                                <span class="text-green-400 font-bold">DASHBOT</span> was developed in one week for the Aliyun Web Game Development Competition.
+                            </p>
+
+                            <p>
+                                This prototype showcases creative gameplay, real-time networking, and a custom-built engine, blending humor and challenge in a unique space-themed duel.
+                            </p>
+                        </div>
+
+                        <!-- Contact & Info -->
+                        <div class="bg-black/30 p-4 rounded-md border border-green-500/50 relative text-left">
+                            <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500"></div>
+                            <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
+                            <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-green-500"></div>
+                            <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-green-500"></div>
+
+                            <h3 class="text-xl font-bold text-green-400 mb-2 flex items-center">
+                                <span class="inline-block w-2 h-2 bg-green-500 mr-2"></span>
+                                Contact & Info
+                            </h3>
+
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>Source Code: <a href="https://github.com/jianongHe/DashBot" class="text-purple-400 underline" target="_blank">https://github.com/jianongHe/DashBot</a></li>
+                                <li>Version: <span class="text-gray-400">v1.0.1</span> - Last updated: April 2025</li>
                             </ul>
                         </div>
                     </div>
@@ -192,7 +190,7 @@
                             <div class="flex-1 bg-black/50 p-3 rounded-md border border-gray-800">
                                 <h4 class="font-bold text-green-400 mb-2 text-center flex justify-center items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mouse-pointer h-4 w-4 mr-1"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="m13 13 6 6"></path></svg>
-                                    <span>Mouse / Touch</span>
+                                    <span>Mouse</span>
                                 </h4>
                                 <div class="flex justify-around items-center mb-3">
                                     <!-- Player 1 -->
@@ -224,6 +222,49 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Core Gameplay -->
+                    <div class="bg-black/30 p-4 rounded-md border border-green-500/50 relative text-left">
+                        <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-green-500"></div>
+                        <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-green-500"></div>
+                        <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-green-500"></div>
+                        <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-green-500"></div>
+
+                        <h3 class="text-xl font-bold text-green-400 mb-2 flex items-center">
+                            <span class="inline-block w-2 h-2 bg-green-500 mr-2"></span>
+                            Core Gameplay
+                        </h3>
+
+                        <p class="mb-2">Control your robot with only one action:</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Hold to charge, release to dash in the direction of your rotating pointer.</li>
+                            <li>Longer charge = further dash, faster speed, more damage (20~60 HP).</li>
+                            <li>Charging cannot be canceled. Once started, you must dash!</li>
+                        </ul>
+                        <p class="mt-2">
+                            Predict, time your dash, and outsmart your opponent in every move!
+                        </p>
+                    </div>
+
+                    <!-- Battle Flow -->
+                    <div class="bg-black/30 p-4 rounded-md border border-purple-800/50 relative text-left">
+                        <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-purple-500"></div>
+                        <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-purple-500"></div>
+                        <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-purple-500"></div>
+                        <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-purple-500"></div>
+
+                        <h3 class="text-xl font-bold text-purple-400 mb-2 flex items-center">
+                            <span class="inline-block w-2 h-2 bg-purple-500 mr-2"></span>
+                            Battle Flow
+                        </h3>
+
+                        <ol class="list-decimal pl-5 space-y-1">
+                            <li><strong>Opening:</strong> Both players test moves, feel the timing.</li>
+                            <li><strong>Mid-game:</strong> The arena shrinks, dashes intensify.</li>
+                            <li><strong>Final Clash:</strong> Fast spinning pointers, tight space, one mistake could cost the match.</li>
+                        </ol>
+                    </div>
+
                 {/if}
             </div>
         </div>
