@@ -14,15 +14,26 @@
      * while a safe zone shrinks.
      */
 
-    // const assetDomain = 'https://assets.dashbot.jianong.me'
-    const assetDomain = ''
+    const assetDomain = 'https://assets.dashbot.jianong.me'
+    // const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();
     redUfoImage.src = assetDomain + '/assets/we.png';
     const blueUfoImage = new Image();
     blueUfoImage.src = assetDomain + '/assets/we222.png';
-    const audio = new Audio(assetDomain + '/voices/0427.MP3');
-    audio.loop = true;
+    const bgmAudio = new Audio(assetDomain + '/voices/0427_c.mp3');
+    bgmAudio.loop = true;
+    const hitAudio = new Audio(assetDomain + '/voices/hit_voice.mp3');
+
+    const chargeAudio = {
+        1: new Audio(assetDomain + '/voices/charge_voice.mp3'),
+        2: new Audio(assetDomain + '/voices/charge_voice.mp3'),
+    }
+
+    const releaseAudio = {
+        1: new Audio(assetDomain + '/voices/release2.mp3'),
+        2: new Audio(assetDomain + '/voices/release2.mp3'),
+    }
 
     // --- Constants ---
     const MS_PER_SECOND = 1000;
@@ -444,6 +455,7 @@
         startCharge() {
             // Can only start charging if not already charging AND not currently dashing
             if (!this.isCharging && !this.isDashing) {
+                playChargeAudio(this.id)
                 this.isCharging = true;
                 this.chargeStartTime = Date.now();
                 this.chargePower = 0; // Reset power at start
@@ -902,6 +914,24 @@
         }
     }
 
+    function playHitAudio() {
+        hitAudio.currentTime = 0.1;
+        hitAudio.play();
+    }
+
+    function playChargeAudio(playerId) {
+        chargeAudio[playerId].currentTime = 0;
+        chargeAudio[playerId].play();
+    }
+
+    function playReleaseAudio(playerId) {
+        chargeAudio[playerId].currentTime = 0;
+        chargeAudio[playerId].pause();
+
+        releaseAudio[playerId].currentTime = 0;
+        releaseAudio[playerId].play();
+    }
+
     // 新增统一碰撞处理
     // game.js – handleCollision 中，确保“撞人者”立刻同步位置，避免后续插值漂移
     function handleCollision(p1, p2) {
@@ -912,6 +942,7 @@
         if (!isRemoteMode) {
             if (p1Dashing) {
                 p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+                playHitAudio()
                 // —— 新增：立即同步撞人者 p1 的位置和朝向 ——
                 p1.targetX = p1.x;
                 p1.targetY = p1.y;
@@ -920,6 +951,7 @@
                 p1._endDash();
             } else if (p2Dashing) {
                 p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+                playHitAudio()
                 // —— 新增：立即同步撞人者 p2 的位置和朝向 ——
                 p2.targetX = p2.x;
                 p2.targetY = p2.y;
@@ -930,6 +962,7 @@
                 // —— 双方互相伤害 ——
                 p1.takeDamage(p2.dashDamage, p2.x, p2.y);
                 p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+                playHitAudio()
 
                 p1.targetX = p1.x;
                 p1.targetY = p1.y;
@@ -947,6 +980,7 @@
         // 网络模式同理
         if (p1Dashing) {
             p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+            playHitAudio()
             p1.targetX = p1.x;
             p1.targetY = p1.y;
             p1.targetAngle = p1.angle;
@@ -958,6 +992,7 @@
 
         } else if (p2Dashing) {
             p1.takeDamage(p2.dashDamage, p2.x, p2.y);
+            playHitAudio()
             p2.targetX = p2.x;
             p2.targetY = p2.y;
             p2.targetAngle = p2.angle;
@@ -969,6 +1004,7 @@
         } else if (bothDashing) {
             p1.takeDamage(p2.dashDamage, p2.x, p2.y);
             p2.takeDamage(p1.dashDamage, p1.x, p1.y);
+            playHitAudio()
 
             p1.targetX = p1.x;
             p1.targetY = p1.y;
@@ -1669,9 +1705,9 @@
 
     function initGame() {
         console.log("Initializing game...");
-        audio.pause();
-        audio.currentTime = 0;
-        audio.play();
+        bgmAudio.pause();
+        bgmAudio.currentTime = 0;
+        bgmAudio.play();
 
         gameOver = false;
         winner = null;
@@ -1867,6 +1903,8 @@
 
     Robot.prototype.releaseCharge = function () {
         if (this.isCharging) {
+            playReleaseAudio(this.id)
+
             this.isCharging = false;
             const chargeDuration = Math.min(Date.now() - this.chargeStartTime, config.charge.maxChargeTime);
             const chargeRatio = chargeDuration / config.charge.maxChargeTime;
