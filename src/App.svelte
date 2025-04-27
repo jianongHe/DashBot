@@ -1585,6 +1585,13 @@
     }
 
     function handleKeyDown(event) {
+        if (showMenu && event.key.toLowerCase() === 'a') {
+            markP1Ready()
+        }
+        if (showMenu && event.key.toLowerCase() === 'l') {
+            markP2Ready()
+        }
+
         if (!gameOver && players[1] && event.key.toLowerCase() === players[1].controlKey && !players[1].isControlDown) {
             if (roomInfo.id && network.playerId !== 2) {
                 return;
@@ -1693,7 +1700,6 @@
             animationFrameId = null;
         }
 
-        setupInputListeners(); // Make sure input listeners are active for the new game
         gameStartTime = performance.now();
         gameStartTimeNormal = Date.now();
         lastFrameTime = performance.now();
@@ -1797,6 +1803,7 @@
         });
 
         console.log("Game script loaded. Setting up.");
+        setupInputListeners(); // Make sure input listeners are active for the new game
         setupStarfield(); // Initialize background
         setupReadyButtons(); // Set up the ready system listeners
         resetReadyState(); // Ensure initial state is 'not ready'
