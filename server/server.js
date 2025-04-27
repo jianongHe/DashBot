@@ -81,8 +81,7 @@ class Room {
         this.broadcast('game_start', {});
         this.isPlaying = true;
 
-        // 90秒后结束游戏
-        setTimeout(() => {
+        this.timeoutHandle = setTimeout(() => {
             if (this.isPlaying) {
                 this.endGame(); // 没有 winner，平局或超时结束
             }
@@ -113,6 +112,10 @@ class Room {
     }
 
     endGame(winner = null) {
+        if (this.timeoutHandle) {
+            clearTimeout(this.timeoutHandle);
+            this.timeoutHandle = null;
+        }
         if (winner) {
             this.score[winner] += 1;
         }
