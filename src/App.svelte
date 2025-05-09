@@ -15,7 +15,7 @@
      * while a safe zone shrinks.
      */
 
-    const assetDomain = 'https://assets.dashbot.jianong.me'
+    const assetDomain = 'https://dashbot.jianong.me'
     // const assetDomain = ''
     // Load UFO image resources
     const redUfoImage = new Image();

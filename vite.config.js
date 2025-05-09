@@ -5,7 +5,7 @@ import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
-    base: 'https://assets.dashbot.jianong.me/', // Aliyun CDN
+    base: './',
     plugins: [
         svelte(),
         tailwindcss(),

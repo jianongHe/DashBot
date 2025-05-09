@@ -6,29 +6,9 @@ on:
       - dash-bot-production
 
 jobs:
-  build-frontend-upload-oss:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install dependencies and build frontend
-        run: |
-          npm install
-          npm run build
-
-      - name: Upload to OSS
-        uses: fangbinwei/aliyun-oss-website-action@v1
-        with:
-          accessKeyId: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          accessKeySecret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          bucket: ${{ secrets.OSS_BUCKET }}
-          endpoint: ${{ secrets.OSS_ENDPOINT }}
-          folder: dist
 
   build-server-push-acr:
     runs-on: ubuntu-latest
-    needs: build-frontend-upload-oss
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -56,25 +36,3 @@ jobs:
             docker login -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }} ${{ secrets.ACR_REGISTRY }}
             docker compose pull
             docker compose up -d
-
-  fresh-cdn:
-    runs-on: ubuntu-latest
-    needs: deploy-server
-    steps:
-      - name: Install Aliyun CLI
-        run: |
-          curl -sL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz | tar -xz
-          sudo mv aliyun /usr/local/bin/
-
-      - name: Configure Aliyun CLI
-        run: |
-          aliyun configure set \
-          --mode AK \
-          --region ap-southeast-1 \
-          --access-key-id ${{ secrets.OSS_ACCESS_KEY_ID }} \
-          --access-key-secret ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-
-      - name: Refresh CDN Cache
-        run: |
-          aliyun cdn RefreshObjectCaches --ObjectPath "http://assets.dashbot.jianong.me/" --ObjectType Directory
-          aliyun cdn RefreshObjectCaches --ObjectPath "https://assets.dashbot.jianong.me/" --ObjectType Directory
